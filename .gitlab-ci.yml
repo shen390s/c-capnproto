@@ -14,7 +14,7 @@
         - environment.yml
       prefix: cachebust1
     paths:
-      - _local
+      - .ci
       # Technique explained at https://damiankula.com/using_conda_cache_in_gitlabci.html
       - $CONDA_PKGS_DIRS/*.conda
       - $CONDA_PKGS_DIRS/*.tar.bz2
