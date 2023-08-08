@@ -9,6 +9,13 @@ project(c-capnproto LANGUAGES ${languages})
 
 include(CTest)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_EXTENSIONS NO)
+if(BUILD_TESTING)
+    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_EXTENSIONS NO)
+endif()
+
 # Stop noise if CXX compiler is set.
 set(ignoreAndAvoidCMakeUnusedWarning "${CMAKE_CXX_COMPILER}")
 

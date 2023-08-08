@@ -18,7 +18,7 @@
 #include "addressbook.capnp.h"
 
 static capn_text chars_to_text(const char *chars) {
-  return (capn_text) {
+  return {
     .len = (int) strlen(chars),
     .str = chars,
     .seg = NULL,

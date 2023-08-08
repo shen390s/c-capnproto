@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.rst": "restructuredtext",
+        "*.make": "makefile",
+        "opam": "ocaml.opam",
+        "schema.capnp.h": "c",
+        "stdbool.h": "c"
+    },
+    "cmake.configureOnOpen": false
+}
