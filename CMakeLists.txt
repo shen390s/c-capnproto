@@ -99,6 +99,6 @@ install(EXPORT CapnC
         FILE CapnCConfig.cmake)
 install(FILES lib/capnp_c.h TYPE INCLUDE)
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(tests)
 endif()

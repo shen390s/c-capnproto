@@ -1,10 +1,9 @@
-capnpc-c
-========
+# capnpc-c
 
 This is a C plugin for [Cap'n Proto](http://kentonv.github.io/capnproto), an
 efficient protocol for sharing data and capabilities.
 
-This is a fork of https://github.com/opensourcerouting/c-capnproto with support
+This is a fork of <https://github.com/opensourcerouting/c-capnproto> with support
 for CMake and Windows, a build matrix that includes Android and Windows, and
 fixes several bugs that start with the [CHANGES for version 0.9.0](./CHANGES.md#090).
 
@@ -13,7 +12,7 @@ and [DkSDK](https://diskuv.com/cmake/help/latest/), but PRs are welcome from
 anybody. If you are looking for your first PR, fixing the false positive
 memory leaks in the test code would be great!
 
-## Security warning!
+## Security warning
 
 > The generated code assumes all input to be trusted. Do NOT use with
 > untrusted input! There is currently no code in place to check if
@@ -53,7 +52,7 @@ cmake --build --preset=ci-tests
 
 ### Generating C code from a `.capnp` schema file
 
-The `compiler` directory contains the C language plugin (`capnpc-c`) for use with the `capnp` tool: https://capnproto.org/capnp-tool.html.
+The `compiler` directory contains the C language plugin (`capnpc-c`) for use with the `capnp` tool: <https://capnproto.org/capnp-tool.html>.
 
 `capnp` will by default search `$PATH` for `capnpc-c` - if it's on your PATH, you can generate code for your schema as follows:
 
@@ -107,12 +106,35 @@ The project [`quagga-capnproto`](https://github.com/opensourcerouting/quagga-cap
 * Serialization in function [`bgp_notify_send()`](https://github.com/opensourcerouting/quagga-capnproto/blob/27061648f3418fac0d217b16a46add534343e841/bgpd/bgp_zmq.c#L81-L96) in file `quagga-capnproto/bgpd/bgp_zmq.c`
 * Deserialization in function [`qzc_callback()`](https://github.com/opensourcerouting/quagga-capnproto/blob/27061648f3418fac0d217b16a46add534343e841/lib/qzc.c#L249-L257) in file `quagga-capnproto/lib/qzc.c`
 
+### Example CMake Usage
+
+The minimum CMake version is 3.22. *The true CMake minimum version could be lower; you are welcome to test and submit a PR to [CMakeLists.txt](./CMakeLists.txt).*
+
+```cmake
+FetchContent_Declare(c-capnproto
+        GIT_REPOSITORY https://gitlab.com/dkml/ext/c-capnproto.git
+        # For reproducibility use a commit id rather than a tag
+        GIT_TAG f07596dbb516329d27ea95060a758f5d48d26366)
+FetchContent_MakeAvailable(c-capnproto)
+
+# Creating an executable or library that uses c-capnproto?
+# --------------------------------------------------------
+
+# filename: yourcode.c
+#
+#   #include "capnp_c.h"
+#   ...
+
+add_executable(YourExecutable ... yourcode.c)
+target_link_libraries(YourExecutable PRIVATE CapnC::Runtime)
+```
+
 ## Status
 
-https://github.com/opensourcerouting/c-capnproto was a merge of 3 forks of [James McKaskill's great
+<https://github.com/opensourcerouting/c-capnproto> was a merge of 3 forks of [James McKaskill's great
 work](https://github.com/jmckaskill/c-capnproto), which had been untouched for
 a while:
 
-- [liamstask's fork](https://github.com/liamstask/c-capnproto)
-- [baruch's fork](https://github.com/baruch/c-capnproto)
-- [kylemanna's fork](https://github.com/kylemanna/c-capnproto)
+* [liamstask's fork](https://github.com/liamstask/c-capnproto)
+* [baruch's fork](https://github.com/baruch/c-capnproto)
+* [kylemanna's fork](https://github.com/kylemanna/c-capnproto)
