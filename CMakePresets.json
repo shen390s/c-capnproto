@@ -1,0 +1,306 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22
+  },
+  "configurePresets": [
+    {
+      "name": "ci-agnostic-configure",
+      "binaryDir": "build",
+      "hidden": true,
+      "description": "ABI-agnostic CI configuration for build and test presets"
+    },
+    {
+      "name": "ci-tests-configure",
+      "inherits": [
+        "ci-agnostic-configure"
+      ],
+      "cacheVariables": {
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "ci-clang_gcc-sanitizers-asan",
+      "description": "Address sanitizer for clang and GCC",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=address -fno-sanitize-recover=all",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=address -fno-sanitize-recover=all",
+        "CMAKE_C_FLAGS_INIT_REASONS": "https://developers.redhat.com/blog/2021/05/05/memory-error-checking-in-c-and-c-comparing-sanitizers-and-valgrind. Because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94328 ASAN and UBSAN don't work together with [log_path] which is needed for CTest"
+      }
+    },
+    {
+      "name": "ci-clang_gcc-sanitizers-ubsan",
+      "description": "Undefined behavior sanitizer for clang and GCC",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_C_FLAGS_INIT": "-fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment",
+        "CMAKE_EXE_LINKER_FLAGS_INIT": "-fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment",
+        "CMAKE_C_FLAGS_INIT_REASONS": "https://developers.redhat.com/blog/2021/05/05/memory-error-checking-in-c-and-c-comparing-sanitizers-and-valgrind. Because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94328 ASAN and UBSAN don't work together with [log_path] which is needed for CTest"
+      }
+    },
+    {
+      "name": "ci-host-windows_x86",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "$env{DKSDK_NINJA_PROGRAM}",
+        "ENV-DKSDK_NINJA_PROGRAM": "Set the environment variable DKSDK_NINJA_PROGRAM to the path to ninja.exe"
+      }
+    },
+    {
+      "name": "ci-target-windows_x86",
+      "hidden": true,
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "ci-host-windows_x86_64",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "$env{DKSDK_NINJA_PROGRAM}",
+        "ENV-DKSDK_NINJA_PROGRAM": "Set the environment variable DKSDK_NINJA_PROGRAM to the path to ninja.exe"
+      }
+    },
+    {
+      "name": "ci-target-windows_x86_64",
+      "hidden": true,
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "ci-host-linux_x86",
+      "hidden": true
+    },
+    {
+      "name": "ci-target-linux_x86",
+      "hidden": true
+    },
+    {
+      "name": "ci-host-linux_x86_64",
+      "hidden": true
+    },
+    {
+      "name": "ci-target-linux_x86_64",
+      "hidden": true
+    },
+    {
+      "name": "ci-host-darwin_arm64",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_APPLE_SILICON_PROCESSOR": "arm64"
+      }
+    },
+    {
+      "name": "ci-target-darwin_arm64",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_EXE_LINKER_FLAGS": "-arch arm64",
+        "CMAKE_MODULE_LINKER_FLAGS": "-arch arm64",
+        "CMAKE_SHARED_LINKER_FLAGS": "-arch arm64",
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+      },
+      "environment": {
+        "CMAKE_x_LINKER_FLAGS_REASON": "DkSDK OCaml uses a single target architecture",
+        "CMAKE_x_COMPILER_REASON": "Direct use of /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc (14.0.0) will fail to link with -lm, -lSystem, etc."
+      }
+    },
+    {
+      "name": "ci-host-darwin_x86_64",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_APPLE_SILICON_PROCESSOR": "x86_64"
+      }
+    },
+    {
+      "name": "ci-target-darwin_x86_64",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "CMAKE_EXE_LINKER_FLAGS": "-arch x86_64",
+        "CMAKE_MODULE_LINKER_FLAGS": "-arch x86_64",
+        "CMAKE_SHARED_LINKER_FLAGS": "-arch x86_64",
+        "CMAKE_C_COMPILER": "/usr/bin/clang",
+        "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+      },
+      "environment": {
+        "CMAKE_x_LINKER_FLAGS_REASON": "DkSDK OCaml uses a single target architecture",
+        "CMAKE_x_COMPILER_REASON": "Direct use of /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc (14.0.0) will fail to link with -lm, -lSystem, etc."
+      }
+    },
+    {
+      "name": "ci-darwin_x86_64",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-darwin_x86_64",
+        "ci-target-darwin_x86_64"
+      ],
+      "displayName": "darwin_x86_64",
+      "description": "Test builds for darwin_x86_64",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-linux_x86_64",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86_64",
+        "ci-target-linux_x86_64"
+      ],
+      "displayName": "linux_x86_64",
+      "description": "Test builds for linux_x86_64",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-linux_x86_64-sanitizers-asan",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86_64",
+        "ci-target-linux_x86_64",
+        "ci-clang_gcc-sanitizers-asan"
+      ],
+      "displayName": "linux_x86_64-sanitizers-asan",
+      "description": "Address Sanitizer builds for linux_x86_64",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-linux_x86_64-sanitizers-ubsan",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86_64",
+        "ci-target-linux_x86_64",
+        "ci-clang_gcc-sanitizers-ubsan"
+      ],
+      "displayName": "linux_x86_64-sanitizers-ubsan",
+      "description": "Undefined Behavior Sanitizer builds for linux_x86_64",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-target-android",
+      "hidden": true,
+      "cacheVariables": {
+        "ANDROID_PLATFORM": "android-21",
+        "ANDROID_NDK": "$env{DKSDK_PROJECT_BASE}.ci/local/share/ndk/ndk/23.1.7779620",
+        "BUILD_HYGIENE": "DISABLED"
+      },
+      "environment": {
+        "ANDROID_x_REASON": "https://developer.android.com/studio/projects/configure-cmake#call-cmake-cli",
+        "BUILD_HYGIENE_REASON": "Android has a stdlib.h that does not pass clang-tidy validation"
+      },
+      "toolchainFile": "$env{DKSDK_PROJECT_BASE}.ci/local/share/ndk/ndk/23.1.7779620/build/cmake/android.toolchain.cmake"
+    },
+    {
+      "name": "ci-target-android_arm32v7a",
+      "hidden": true,
+      "inherits": [ "ci-target-android" ],
+      "cacheVariables": {
+        "ANDROID_ABI": "armeabi-v7a"
+      }
+    },
+    {
+      "name": "ci-target-android_arm64v8a",
+      "hidden": true,
+      "inherits": [ "ci-target-android" ],
+      "cacheVariables": {
+        "ANDROID_ABI": "arm64-v8a"
+      }
+    },
+    {
+      "name": "ci-target-android_x86",
+      "hidden": true,
+      "inherits": [ "ci-target-android" ],
+      "cacheVariables": {
+        "ANDROID_ABI": "x86"
+      }
+    },
+    {
+      "name": "ci-target-android_x86_64",
+      "hidden": true,
+      "inherits": [ "ci-target-android" ],
+      "cacheVariables": {
+        "ANDROID_ABI": "x86_64"
+      }
+    },
+    {
+      "name": "ci-linux_x86_X_android_x86",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86",
+        "ci-target-android_x86"
+      ],
+      "displayName": "linux_x86 -> android_x86",
+      "description": "Cross-compiler of host linux_x86 to target android_x86",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-linux_x86_X_android_arm32v7a",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86",
+        "ci-target-android_arm32v7a"
+      ],
+      "displayName": "linux_x86 -> android_arm32v7a",
+      "description": "Cross-compiler of host linux_x86 to target android_arm32v7a",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-linux_x86_64_X_android_x86_64",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86_64",
+        "ci-target-android_x86_64"
+      ],
+      "displayName": "linux_x86_64 -> android_x86_64",
+      "description": "Cross-compiler of host linux_x86_64 to target android_x86_64",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-linux_x86_64_X_android_arm64v8a",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-linux_x86_64",
+        "ci-target-android_arm64v8a"
+      ],
+      "displayName": "linux_x86_64 -> android_arm64v8a",
+      "description": "Cross-compiler of host linux_x86_64 to target android_arm64v8a",
+      "generator": "Ninja"
+    },
+    {
+      "name": "ci-windows_x86_64",
+      "inherits": [
+        "ci-tests-configure",
+        "ci-host-windows_x86_64",
+        "ci-target-windows_x86_64"
+      ],
+      "displayName": "windows_x86_64",
+      "description": "Test builds for windows_x86_64",
+      "generator": "Ninja"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ci-tests-build",
+      "hidden": true,
+      "configurePreset": "ci-tests-configure",
+      "configuration": "Release"
+    },
+    {
+      "name": "ci-tests",
+      "inherits": "ci-tests-build",
+      "targets": ["all"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "ci-test",
+      "configurePreset": "ci-tests-configure"
+    }
+  ]
+}

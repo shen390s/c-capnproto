@@ -1,0 +1,67 @@
+.conda-c-cmake:before:
+  # Use:
+  #   docker run -it --platform linux/amd64 continuumio/miniconda3:22.11.1
+  # to test out on a local developer machine (including macOS/ARM64 Silicon)
+  image: continuumio/miniconda3:22.11.1
+  variables:
+    CONDA_PKGS_DIRS: "$CI_PROJECT_DIR/.conda-pkgs-cache"
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    DEBIAN_FRONTEND: noninteractive
+
+  cache:
+    key:
+      files:
+        - environment.yml
+      prefix: cachebust1
+    paths:
+      - _local
+      # Technique explained at https://damiankula.com/using_conda_cache_in_gitlabci.html
+      - $CONDA_PKGS_DIRS/*.conda
+      - $CONDA_PKGS_DIRS/*.tar.bz2
+      - $CONDA_PKGS_DIRS/urls*
+      - $CONDA_PKGS_DIRS/cache
+      # yay, we don't use pip: - $PIP_CACHE_DIR
+
+  before_script:
+    # Update/install system pkgs first, so conda can use latest system pkgs.
+    - apt-get update
+    # Install Ninja + rsync.
+    #   ninja: CMake configure
+    #   build-essential: CMake project(LANGUAGES C)
+    - apt-get install -qq -o=Dpkg::Use-Pty=0 ninja-build build-essential > /dev/null
+    # Install CMake
+    - ./dk dksdk.cmake.link
+
+    # Install Python
+    - conda env create --quiet -f environment.yml
+
+.c-cmake-debian:before:
+  image: debian:stable-slim
+  variables:
+    DEBIAN_FRONTEND: noninteractive # for apt-get
+  before_script:
+    # Update/install system pkgs first, so conda can use latest system pkgs.
+    - apt-get update
+    # Install Ninja and C compiler
+    #   ninja: CMake configure
+    #   clang-tidy: CMake -D BUILD_HYGIENE=ENABLED (or the unset default)
+    #   wget: ci/install-cmake.sh
+    #   build-essential: CMake project(LANGUAGES C)
+    #   git: CMake FetchContent()
+    #   valgrind: ctest -T memcheck
+    - apt-get install -qq -o=Dpkg::Use-Pty=0 ninja-build clang-tidy wget build-essential git valgrind > /dev/null
+    # Install CMake
+    - ./dk dksdk.cmake.link
+
+.c-cmake-windows:before:
+  tags: [shared-windows, windows, windows-1809]
+  variables:
+    VSDIR: C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools
+    DKSDK_NINJA_PROGRAM: "$CI_PROJECT_DIR\\.ci\\ninja\\bin\\ninja.exe"
+  before_script:
+    # https://gitlab.com/gitlab-org/ci-cd/shared-runners/images/gcp/windows-containers/blob/main/cookbooks/preinstalled-software/README.md
+    # CMake is already present on GitLab CI/CD. No 'choco install -y cmake' (choco frequents gets HTTP 403) or './dk dksdk.cmake.link' needed
+    - ./dk dksdk.ninja.link
+
+include:
+  - local: ci/gitlab/test.gitlab-ci.yml

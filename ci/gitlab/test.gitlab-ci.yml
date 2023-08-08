@@ -1,0 +1,155 @@
+.unit-test:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "next"'
+  artifacts:
+    paths:
+      - build/Testing/Temporary/LastBuild_*.log
+      - build/Testing/Temporary/LastTest.log
+      - build/Testing/Temporary/LastTests_*.log
+      - build/Testing/Temporary/MemoryChecker.*.log
+    reports:
+      junit:
+        - build/cmakespec.xml
+        - build/tests/*-Results.xml
+    when: always
+
+unit-test-debian:
+  stage: test
+  # The original c-capnproto unit tests were full of memory leaks (not closing test
+  # structures). Sigh. Until those are fixed, we can't detect real memory leaks.
+  allow_failure: true
+  extends:
+    - .c-cmake-debian:before
+    - .unit-test
+  script:
+    - export PATH="$PWD/.ci/cmake/bin:$PATH"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:configure[collapsed=true]\r\e[0KConfiguring build scripts"
+    - rm -rf build/
+    - cmake --preset=ci-linux_x86_64 -D BUILD_HYGIENE=ENABLED
+    - echo -e "\e[0Ksection_end:`date +%s`:configure\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:build[collapsed=true]\r\e[0KBuilding test targets"
+    - cmake --build --preset=ci-tests
+    - echo -e "\e[0Ksection_end:`date +%s`:build\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:unittest[collapsed=true]\r\e[0KUnit Testing"
+    - ctest --output-junit cmakespec.xml --verbose --preset=ci-test
+    - echo -e "\e[0Ksection_end:`date +%s`:unittest\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:memcheck[collapsed=true]\r\e[0KMemory Testing"
+    - ctest -T memcheck --test-dir build --verbose
+    - echo -e "\e[0Ksection_end:`date +%s`:memcheck\r\e[0K"
+
+unit-test-android_x86_64:
+  stage: test
+  extends:
+    - .c-cmake-debian:before
+    - .unit-test
+  script:
+    - export PATH="$PWD/.ci/cmake/bin:$PATH"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:installandroid[collapsed=true]\r\e[0KInstalling Android NDK"
+    - ./dk dksdk.android.ndk.download
+    - echo -e "\e[0Ksection_end:`date +%s`:installandroid\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:configure[collapsed=true]\r\e[0KConfiguring build scripts"
+    - rm -rf build/
+    - cmake --preset=ci-linux_x86_64_X_android_x86_64
+    - echo -e "\e[0Ksection_end:`date +%s`:configure\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:build[collapsed=true]\r\e[0KBuilding test targets"
+    - cmake --build --preset=ci-tests
+    - echo -e "\e[0Ksection_end:`date +%s`:build\r\e[0K"
+
+    - echo 'No unit tests and no memory tests for a cross-compiled target'
+
+unit-test-windows:
+  stage: test
+  extends:
+    - .c-cmake-windows:before
+    - .unit-test
+  script:
+    - $env:Path += ';C:\Program Files\CMake\bin'
+
+    - $esc="$([char]27)"; $cr="$([char]13)"; $TXT_SECTION="${esc}[36m"; $TXT_CLEAR="${esc}[0m"
+    - |
+      function Get-CurrentEpochSecs {
+          [long]$timestamp = [math]::Round((([datetime]::UtcNow) - (Get-Date -Date '1/1/1970')).TotalMilliseconds)
+          [math]::Round($timestamp / 1000)
+      }
+
+    - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):configure[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Configuring build scripts"
+    - if (Test-Path build) { Remove-Item -Recurse -Force build }
+    # Linux can test with BUILD_HYGIENE=ENABLED. Don't want to install clang-tidy through
+    # Chocolatey because huge LLVM download (`choco install llvm`).
+    - ci/run-with-msvc.cmd cmake --preset=ci-windows_x86_64 -D BUILD_HYGIENE=DISABLED
+    - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):configure${cr}${esc}[0K"
+
+    - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):build[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Building test targets"
+    - ci/run-with-msvc.cmd cmake --build --preset=ci-tests
+    - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):build${cr}${esc}[0K"
+
+    - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):unittest[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Unit Testing"
+    - ci/run-with-msvc.cmd ctest --output-junit cmakespec.xml --verbose --preset=ci-test
+    - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):unittest${cr}${esc}[0K"
+
+sanitizers-debian-asan:
+  stage: test
+  extends:
+    - .c-cmake-debian:before
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "next"'
+  artifacts:
+    paths:
+      - build/Testing/Temporary/LastBuild_*.log
+      - build/Testing/Temporary/LastDynamicAnalysis_*.log
+      - build/Testing/Temporary/LastTest.log
+      - build/Testing/Temporary/LastTests_*.log
+      - build/Testing/Temporary/MemoryChecker.*.log
+    reports:
+      junit:
+        - build/cmakespec.xml
+        - build/tests/*-Results.xml
+    when: always
+  script:
+    - export PATH="$PWD/.ci/cmake/bin:$PATH"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:configure[collapsed=true]\r\e[0KConfiguring build scripts"
+    - rm -rf build/
+    - cmake --preset=ci-linux_x86_64-sanitizers-asan
+    - echo -e "\e[0Ksection_end:`date +%s`:configure\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:build[collapsed=true]\r\e[0KRunning ASAN sanitizers build and check"
+    - ctest -S ci/ctest/Sanitizers-ASAN-CTest.cmake
+    - echo -e "\e[0Ksection_end:`date +%s`:build\r\e[0K"
+
+sanitizers-debian-ubsan:
+  stage: test
+  extends:
+    - .c-cmake-debian:before
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "next"'
+  artifacts:
+    paths:
+      - build/Testing/Temporary/LastBuild_*.log
+      - build/Testing/Temporary/LastDynamicAnalysis_*.log
+      - build/Testing/Temporary/LastTest.log
+      - build/Testing/Temporary/LastTests_*.log
+      - build/Testing/Temporary/MemoryChecker.*.log
+    reports:
+      junit:
+        - build/cmakespec.xml
+        - build/tests/*-Results.xml
+    when: always
+  script:
+    - export PATH="$PWD/.ci/cmake/bin:$PATH"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:configure[collapsed=true]\r\e[0KConfiguring build scripts"
+    - rm -rf build/
+    - cmake --preset=ci-linux_x86_64-sanitizers-ubsan
+    - echo -e "\e[0Ksection_end:`date +%s`:configure\r\e[0K"
+
+    - echo -e "\e[0Ksection_start:`date +%s`:build[collapsed=true]\r\e[0KRunning UBSAN sanitizers build and check"
+    - ctest -S ci/ctest/Sanitizers-UBSAN-CTest.cmake
+    - echo -e "\e[0Ksection_end:`date +%s`:build\r\e[0K"

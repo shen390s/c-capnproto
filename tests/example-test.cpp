@@ -85,7 +85,7 @@ TEST(Examples, RoundTripPerson) {
 
   {
     // Write serialized object to file system.
-    FILE *f = fopen("tests/example-test.cpp.Person.out", "wb");
+    FILE *f = fopen("example-test.cpp.Person.out", "wb");
     ASSERT_NE(f, (void*)0);
     fwrite(buf, 1 /* size */, sz /* count */, f);
     int close_ret = fclose(f);

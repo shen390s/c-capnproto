@@ -4,17 +4,16 @@ capnpc-c
 This is a C plugin for [Cap'n Proto](http://kentonv.github.io/capnproto), an
 efficient protocol for sharing data and capabilities.
 
-## UNMAINTAINED
+This is a fork of https://github.com/opensourcerouting/c-capnproto with support
+for CMake and Windows, a build matrix that includes Android and Windows, and
+fixes several bugs that start with the [CHANGES for version 0.9.0](./CHANGES.md#090).
 
-This project is currently **NOT MAINTAINED**.  If you are interested in
-taking over maintenance and/or need this for some project, please look at
-issue https://github.com/opensourcerouting/c-capnproto/issues/55
+The fork is maintained as part of [DkML](https://diskuv.com/dkmlbook/)
+and [DkSDK](https://diskuv.com/cmake/help/latest/), but PRs are welcome from
+anybody. If you are looking for your first PR, fixing the false positive
+memory leaks in the test code would be great!
 
-No releases will be made.  PRs may sit unreviewed for multiple years.  **PRs
-MAY get merged WITHOUT ANY REVIEW, as a last ditch attempt to not waste
-people's efforts on PRs.  This means things may break completely.**
-
-> ## Security warning!
+## Security warning!
 
 > The generated code assumes all input to be trusted. Do NOT use with
 > untrusted input! There is currently no code in place to check if
@@ -28,27 +27,26 @@ this project and then you can utilize it as:
 capnpc compiler/test.capnp -oc
 ```
 
-[![Build Status](https://travis-ci.org/opensourcerouting/c-capnproto.svg?branch=master)](https://travis-ci.org/opensourcerouting/c-capnproto)
-
 ## Building on Linux
 
 ```sh
-git clone --recurse-submodules https://github.com/opensourcerouting/c-capnproto
+git clone https://gitlab.com/diskuv-ocaml/ext/c-capnproto.git
 cd c-capnproto
-autoreconf -f -i -s
-./configure
-make
-make check
+cmake --preset=ci-linux_x86_64
+cmake --build --preset=ci-tests
 ```
 
-## Building with Meson
+## Building on Windows
+
+You will need Visual Studio 2019 installed. Other versions of Visual Studio may work; they simply haven't been tested.
+
+Once you have Visual Studio, run the `x64 Native Tools Command Prompt for VS 2019` and type the following:
 
 ```sh
-git clone --recurse-submodules https://github.com/opensourcerouting/c-capnproto
+git clone https://gitlab.com/diskuv-ocaml/ext/c-capnproto.git
 cd c-capnproto
-meson setup build
-meson compile -C build
-build/capn-test
+cmake --preset=ci-windows_x86_64
+cmake --build --preset=ci-tests
 ```
 
 ## Usage
@@ -111,8 +109,8 @@ The project [`quagga-capnproto`](https://github.com/opensourcerouting/quagga-cap
 
 ## Status
 
-This is a merge of 3 forks of [James McKaskill's great
-work](https://github.com/jmckaskill/c-capnproto), which has been untouched for
+https://github.com/opensourcerouting/c-capnproto was a merge of 3 forks of [James McKaskill's great
+work](https://github.com/jmckaskill/c-capnproto), which had been untouched for
 a while:
 
 - [liamstask's fork](https://github.com/liamstask/c-capnproto)

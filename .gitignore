@@ -33,3 +33,6 @@ c-capnproto.pc
 
 subprojects/googletest-*
 subprojects/packagecache
+
+/build/
+/.ci/
