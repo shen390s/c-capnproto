@@ -187,14 +187,14 @@
       "hidden": true,
       "cacheVariables": {
         "ANDROID_PLATFORM": "android-21",
-        "ANDROID_NDK": "$env{DKSDK_PROJECT_BASE}.ci/local/share/ndk/ndk/23.1.7779620",
+        "ANDROID_NDK": "$env{DKSDK_PROJECT_BASE}.ci/local/share/android-sdk/ndk/23.1.7779620",
         "BUILD_HYGIENE": "DISABLED"
       },
       "environment": {
         "ANDROID_x_REASON": "https://developer.android.com/studio/projects/configure-cmake#call-cmake-cli",
         "BUILD_HYGIENE_REASON": "Android has a stdlib.h that does not pass clang-tidy validation"
       },
-      "toolchainFile": "$env{DKSDK_PROJECT_BASE}.ci/local/share/ndk/ndk/23.1.7779620/build/cmake/android.toolchain.cmake"
+      "toolchainFile": "$env{DKSDK_PROJECT_BASE}.ci/local/share/android-sdk/ndk/23.1.7779620/build/cmake/android.toolchain.cmake"
     },
     {
       "name": "ci-target-android_arm32v7a",
