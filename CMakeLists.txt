@@ -60,6 +60,7 @@ add_library(CapnC_Runtime ${linkage}
 add_library(CapnC::Runtime ALIAS CapnC_Runtime)
 set_target_properties(CapnC_Runtime PROPERTIES
         EXPORT_NAME Runtime
+        POSITION_INDEPENDENT_CODE ON
         WINDOWS_EXPORT_ALL_SYMBOLS ON)
 target_include_directories(CapnC_Runtime
         PUBLIC
