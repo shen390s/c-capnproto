@@ -29,7 +29,7 @@ capnpc compiler/test.capnp -oc
 ## Building on Linux
 
 ```sh
-git clone https://gitlab.com/diskuv-ocaml/ext/c-capnproto.git
+git clone https://gitlab.com/dkml/ext/c-capnproto.git
 cd c-capnproto
 cmake --preset=ci-linux_x86_64
 cmake --build --preset=ci-tests
