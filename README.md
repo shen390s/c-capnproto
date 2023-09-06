@@ -42,7 +42,7 @@ You will need Visual Studio 2019 installed. Other versions of Visual Studio may 
 Once you have Visual Studio, run the `x64 Native Tools Command Prompt for VS 2019` and type the following:
 
 ```sh
-git clone https://gitlab.com/diskuv-ocaml/ext/c-capnproto.git
+git clone https://gitlab.com/dkml/ext/c-capnproto.git
 cd c-capnproto
 cmake --preset=ci-windows_x86_64
 cmake --build --preset=ci-tests
