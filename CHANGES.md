@@ -11,6 +11,7 @@
 - Wrap macro parameters in the `capnp_use(x)` macro. Passes clang-tidy (not
   a false positive)
 - Add POSITION_INDEPENDENT_CODE to CapnC::Runtime
+- Add C_CAPNPROTO_ENABLE_INSTALL with default ON to enable cmake --install
 
 ## 0.3 (632f0d73a1f4a03026b5e4727386b9fe3ec6e00e)
 

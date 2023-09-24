@@ -92,13 +92,16 @@ if(BUILD_SHARED_LIBS)
         ${base}/${relDir})
 endif()
 
-install(TARGETS CapnC_Runtime capnpc-c
-        EXPORT CapnC)
-install(EXPORT CapnC
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CapnC
-        NAMESPACE CapnC::
-        FILE CapnCConfig.cmake)
-install(FILES lib/capnp_c.h TYPE INCLUDE)
+option(C_CAPNPROTO_ENABLE_INSTALL "Add instructions for 'cmake --install' of CapnC_Runtime library and capnpc-c executable" ON)
+if(C_CAPNPROTO_ENABLE_INSTALL)
+    install(TARGETS CapnC_Runtime capnpc-c
+            EXPORT CapnC)
+    install(EXPORT CapnC
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CapnC
+            NAMESPACE CapnC::
+            FILE CapnCConfig.cmake)
+    install(FILES lib/capnp_c.h TYPE INCLUDE)
+endif()
 
 if(BUILD_TESTING AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(tests)
