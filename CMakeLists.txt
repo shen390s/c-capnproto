@@ -24,13 +24,12 @@ if(APPLE)
     set(CMAKE_MACOSX_RPATH OFF)
 endif()
 
-# Boilerplate DK CMAKE PROJ 2023-05-17.2
-if(BUILD_SHARED_LIBS)
-    # SHARED is implied by BUILD_SHARED_LIBS=ON
-    set(linkage)
-else()
-    set(linkage STATIC)
+# Boilerplate DK CMAKE PROJ 2023-09-25.1
+set(default_build_shared)
+if(NOT (ANDROID OR IOS))
+    set(default_build_shared ON)
 endif()
+option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ${default_build_shared})
 
 # Build hygiene: Tools for keeping the source code clean. By default
 # we try to enforce build hygiene.
@@ -52,7 +51,7 @@ if(NOT BUILD_HYGIENE STREQUAL DISABLED)
             ${find_program_args})
 endif()
 
-add_library(CapnC_Runtime ${linkage}
+add_library(CapnC_Runtime
         lib/capn.c
         lib/capn-malloc.c
         lib/capn-stream.c

@@ -1,5 +1,13 @@
 # Changes
 
+## 0.9.1
+
+- (backwards incompatible) Add CMake cache variable `BUILD_SHARED_LIBS`.
+  The default is a static library for mobile (Android and iOS), and a
+  shared library otherwise; that is the same pattern followed by opencv.
+  The variable should be explicitly set to `ON` if a shared library must
+  be created, and `OFF` if a static library must be created.
+
 ## 0.9.0
 
 - Forked to the DkML repository on GitLab.
@@ -11,7 +19,9 @@
 - Wrap macro parameters in the `capnp_use(x)` macro. Passes clang-tidy (not
   a false positive)
 - Add POSITION_INDEPENDENT_CODE to CapnC::Runtime
-- Add C_CAPNPROTO_ENABLE_INSTALL with default ON to enable cmake --install
+- Add C_CAPNPROTO_ENABLE_INSTALL with default ON to turn off and on
+  installation of targets and files in `cmake --install`, especially for when
+  this project is used within a FetchContent() command.
 
 ## 0.3 (632f0d73a1f4a03026b5e4727386b9fe3ec6e00e)
 
