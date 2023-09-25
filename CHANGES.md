@@ -7,6 +7,7 @@
   shared library otherwise; that is the same pattern followed by opencv.
   The variable should be explicitly set to `ON` if a shared library must
   be created, and `OFF` if a static library must be created.
+- Use GoogleTest 1.14.0 and enable tests only when C++14 compiler available.
 
 ## 0.9.0
 
