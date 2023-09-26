@@ -8,6 +8,11 @@
   The variable should be explicitly set to `ON` if a shared library must
   be created, and `OFF` if a static library must be created.
 - Use GoogleTest 1.14.0 and enable tests only when C++14 compiler available.
+- Support building into shared libraries on Windows:
+- `extraheader` attribute: Extra `#include <stdio.h>` or any other
+  preprocessor statements in auto-generated header file.
+- `extendedattribute` attribute: Text in front of auto-generated functions,
+  like `__declspec(dllexport)`
 
 ## 0.9.0
 

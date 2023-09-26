@@ -35,4 +35,7 @@ subprojects/googletest-*
 subprojects/packagecache
 
 /build/
+/build_dev/
 /.ci/
+
+/CMakeUserPresets.json

@@ -68,12 +68,38 @@ capnp compile -o ./capnpc-c myschema.capnp
 
 `capnp` generates a C struct that corresponds to each capn proto struct, along with read/write functions that convert to/from capn proto form.
 
-If you want accessor functions for struct members, use attribute  `fieldgetset` in your `.capnp` file as follows:
+#### fieldgetset
+
+If you want accessor functions for struct members, use the attribute `fieldgetset` in your `.capnp` file as follows:
 
 ```capnp
 using C = import "${c-capnproto}/compiler/c.capnp";
 
 $C.fieldgetset;
+
+struct MyStruct {}
+```
+
+#### extraheader
+
+If you want to add `#include <...>` or any other preprocessor statements in your generated C file, use the attribute `extraheader` in your `.capnp` file as follows:
+
+```capnp
+using C = import "${c-capnproto}/compiler/c.capnp";
+
+$C.extraheader("include <stdio.h>");
+
+struct MyStruct {}
+```
+
+#### extendedattribute
+
+If you want to add an `__declspec(dllexport)` or some other extended attribute to your generated C functions and structs, use the attribute `extendedattribute` in your `.capnp` file as follows:
+
+```capnp
+using C = import "${c-capnproto}/compiler/c.capnp";
+
+$C.extendedattribute("__declspec(dllexport)");
 
 struct MyStruct {}
 ```
