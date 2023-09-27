@@ -1126,9 +1126,8 @@ static void define_struct(struct node *n, const char* extattr, const char* extat
 
 	str_add(&HDR, s.enums.str, s.enums.len);
 
-	str_addf(&HDR, "\n%sstruct %s%s%s {\n",
+	str_addf(&HDR, "\n%sstruct %s {\n",
 			s.decl.len == 0 ? "capnp_nowarn " : "",
-			extattr, extattr_space,
 			n->name.str);
 	str_add(&HDR, s.decl.str, s.decl.len);
 	str_addf(&HDR, "};\n");
@@ -1662,7 +1661,7 @@ int main() {
 
 		str_addf(&HDR, "\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n");
 
-		declare_ext(file_node, "struct %s%s%s;\n", 1, extattr, extattr_space);
+		declare(file_node, "struct %s;\n", 1);
 		declare(file_node, "typedef struct {capn_ptr p;} %s_ptr;\n", 1);
 		declare(file_node, "typedef struct {capn_ptr p;} %s_list;\n", 1);
 
