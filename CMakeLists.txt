@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-if(BUILD_TESTING)
+if(BUILD_TESTING OR NOT DEFINED BUILD_TESTING)
     # The tests are C++
     set(languages C CXX)
 else()
