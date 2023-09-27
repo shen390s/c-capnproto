@@ -51,29 +51,96 @@ if(NOT BUILD_HYGIENE STREQUAL DISABLED)
             ${find_program_args})
 endif()
 
-add_library(CapnC_Runtime
-        lib/capn.c
-        lib/capn-malloc.c
-        lib/capn-stream.c
-        lib/capnp_c.h)
-add_library(CapnC::Runtime ALIAS CapnC_Runtime)
-set_target_properties(CapnC_Runtime PROPERTIES
-        EXPORT_NAME Runtime
-        POSITION_INDEPENDENT_CODE ON
-        WINDOWS_EXPORT_ALL_SYMBOLS ON)
-target_include_directories(CapnC_Runtime
-        PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/compiler>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib>
-        $<INSTALL_INTERFACE:include>)
+# add_runtime_library(
+#       NAME_SUFFIX <suffix>
+#       [EXCLUDE_FROM_ALL]
+#       [MODE STATIC|STATIC_EXPORTS|SHARED]
+# )
+#
+# Without a MODE the library is built according to CMake conventions (BUILD_SHARED_LIBS).
+#
+# NAME_SUFFIX <suffix>
+#       A suffix added to the CMake names.
+#
+#       The target will be named `CapnC_Runtime<SUFFIX>`.
+#       The alias will be named `CapnC::Runtime<SUFFIX>`.
+#
+# EXCLUDE_FROM_ALL
+#
+#       Do not add the library to the ALL target.
+#
+# MODE STATIC|STATIC_EXPORTS|SHARED
+#
+#       STATIC
+#       Build a static library without export symbols, regardless of BUILD_SHARED_LIBS.
+#
+#       STATIC_EXPORTS
+#       Build a static library with export symbols, regardless of BUILD_SHARED_LIBS.
+#
+#       SHARED
+#       Build a shared library, regardless of BUILD_SHARED_LIBS.
+function(add_runtime_library)
+        set(noValues EXCLUDE_FROM_ALL)
+        set(singleValues NAME_SUFFIX MODE)
+        set(multiValues)
+        cmake_parse_arguments(PARSE_ARGV 0 ARG "${noValues}" "${singleValues}" "${multiValues}")
+
+        # Nice names which can be used without shadowing even in add_subdirectory()
+        set(C_CAPNPROTO_ALIAS CapnC::Runtime${ARG_NAME_SUFFIX})
+        set(C_CAPNPROTO_TARGET CapnC_Runtime${ARG_NAME_SUFFIX})
+        set(C_CAPNPROTO_EXPORTS ${BUILD_SHARED_LIBS})
+        set(C_CAPNPROTO_LINKAGE)
+        set(PROP_EXCLUDE_FROM_ALL)
+        if(ARG_EXCLUDE_FROM_ALL)
+                set(PROP_EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL)
+        endif()
+        if(NOT ARG_MODE)
+        elseif(ARG_MODE STREQUAL STATIC)
+                set(C_CAPNPROTO_EXPORTS OFF)
+                set(C_CAPNPROTO_LINKAGE STATIC)
+        elseif(ARG_MODE STREQUAL STATIC_EXPORTS)
+                set(C_CAPNPROTO_EXPORTS ON)
+                set(C_CAPNPROTO_LINKAGE STATIC)
+        elseif(ARG_MODE STREQUAL SHARED)
+                set(C_CAPNPROTO_EXPORTS ON)
+                set(C_CAPNPROTO_LINKAGE SHARED)
+        else()
+                message(FATAL_ERROR "No [MODE ${ARG_MODE}] is supported")
+        endif()
+
+        add_library(${C_CAPNPROTO_TARGET} ${C_CAPNPROTO_LINKAGE} ${PROP_EXCLUDE_FROM_ALL}
+                lib/capn.c
+                lib/capn-malloc.c
+                lib/capn-stream.c
+                lib/capnp_c.h)
+        add_library(${C_CAPNPROTO_ALIAS} ALIAS ${C_CAPNPROTO_TARGET})
+        set_target_properties(${C_CAPNPROTO_TARGET} PROPERTIES
+                EXPORT_NAME Runtime${ARG_NAME_SUFFIX}
+                POSITION_INDEPENDENT_CODE ON
+                WINDOWS_EXPORT_ALL_SYMBOLS ON)
+        target_include_directories(${C_CAPNPROTO_TARGET}
+                PUBLIC
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/compiler>
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib>
+                $<INSTALL_INTERFACE:include>)
+        if(C_CAPNPROTO_EXPORTS)
+                set_target_properties(${C_CAPNPROTO_TARGET} PROPERTIES
+                    WINDOWS_EXPORT_ALL_SYMBOLS ON)
+        endif()
+endfunction()
+
+add_runtime_library()
+add_runtime_library(NAME_SUFFIX -Shared             EXCLUDE_FROM_ALL MODE SHARED)
+add_runtime_library(NAME_SUFFIX -Static             EXCLUDE_FROM_ALL MODE STATIC)
+add_runtime_library(NAME_SUFFIX -StaticExports      EXCLUDE_FROM_ALL MODE STATIC_EXPORTS)
 
 add_executable(capnpc-c
         compiler/capnpc-c.c
         compiler/schema.capnp.c
         compiler/str.c)
-target_link_libraries(capnpc-c CapnC_Runtime)
+target_link_libraries(capnpc-c CapnC::Runtime)
 target_include_directories(capnpc-c
-        PRIVATE lib)
+        PRIVATE lib)        
 
 # Boilerplate DK CMAKE PROJ 2023-05-17.3
 if(BUILD_SHARED_LIBS)

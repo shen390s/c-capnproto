@@ -13,6 +13,8 @@
   preprocessor statements in auto-generated header file.
 - `extendedattribute` attribute: Text in front of auto-generated functions,
   like `__declspec(dllexport)`
+- Add target variants `CapnC::Runtime-Shared`, `CapnC::Runtime-Static` and
+  `CapnC::Runtime-StaticExports`
 
 ## 0.9.0
 
