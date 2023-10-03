@@ -35,7 +35,8 @@ option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static on
 # we try to enforce build hygiene.
 # You can override with either BUILD_HYGIENE=DISABLED or
 # BUILD_HYGIENE=ENABLED.
-if(NOT BUILD_HYGIENE STREQUAL DISABLED)
+# Hygiene is only done if the project is top-level.
+if(PROJECT_IS_TOP_LEVEL AND NOT BUILD_HYGIENE STREQUAL DISABLED)
     if(BUILD_HYGIENE STREQUAL ENABLED)
         set(find_program_args REQUIRED)
     else()

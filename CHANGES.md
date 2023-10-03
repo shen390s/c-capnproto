@@ -15,6 +15,7 @@
   like `__declspec(dllexport)`
 - Add target variants `CapnC::Runtime-Shared`, `CapnC::Runtime-Static` and
   `CapnC::Runtime-StaticExports`
+- Hygiene only runs when the project is top-level.
 
 ## 0.9.0
 
