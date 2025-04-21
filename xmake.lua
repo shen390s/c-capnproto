@@ -1,0 +1,58 @@
+add_rules("mode.debug", "mode.release")
+
+includes("@builtin/xpack")
+
+add_requires("gtest")
+
+option("trace")
+	set_default(false)
+	set_showmenu(true)
+	add_defines("DEBUG")
+	
+target("CapnC_Runtime")
+	set_kind("static")
+	add_rules("utils.install.pkgconfig_importfiles")
+	add_files("lib/*.c")
+	add_headerfiles("lib/capnp_c.h")
+	add_options("trace")
+
+target("capnpc-c")
+	set_kind("binary")
+	add_files("compiler/*.c")
+	add_includedirs("lib", "compiler")
+	add_installfiles("compiler/c.capnp", "compiler/c++.capnp","compiler/schema.capnp",{ prefixdir = "share/schema"})
+	add_deps("CapnC_Runtime")
+	add_options("trace")
+
+rule("capnproto.c")
+	set_extensions(".capnp")
+	on_build_file(function (target, sourcefile,opt)
+	    os.setenv("PATH", string.format("%s:%s", target:targetdir(), os.getenv("PATH")))
+	    os.runv("capnp", {"compile", "-oc", "-Icompiler", sourcefile})
+	end)
+	
+
+target("test")
+	set_kind("binary")
+	add_packages("gtest")
+	add_files("tests/*.c", "tests/*.cpp")
+	add_deps("CapnC_Runtime", "capnpc-c")
+	add_includedirs("compiler", "lib")
+	add_options("trace")
+
+target("book")
+	set_kind("binary")
+	set_policy("build.across_targets_in_parallel", false)
+	add_packages("capnpc-c")
+	add_rules("capnproto.c")
+	add_files("examples/book/book.capnp")
+	add_files("examples/book/*.c")
+	add_includedirs("compiler","lib","examples/book")
+	add_deps("CapnC_Runtime", "capnpc-c")
+
+xpack("capnpc-c")
+	set_formats("targz")
+	set_title("c-capnproto")
+	set_licensefile("COPYING")
+	add_targets("capnpc-c", "CapnC_Runtime")
+	

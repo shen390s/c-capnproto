@@ -73,6 +73,7 @@ struct string_list {
 };
 
 typedef struct {
+  struct capn capn;
   struct str HDR;
   struct str SRC;
   struct capn_segment g_valseg;
@@ -1118,7 +1119,7 @@ static void encode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
 static void decode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
                           const char *tab, const char *var, const char *var2) {
   struct Type list_type;
-  struct node * n = NULL;
+  struct node *n = NULL;
 
   if (f->v.t.which == Type__void) {
     return;
@@ -1242,7 +1243,7 @@ void mk_struct_ptr_encoder(capnp_ctx_t *ctx, struct node *n) {
   }
 
   mapname = (char *)get_mapname(n->n.annotations);
-  
+
   if (mapname == NULL) {
     sprintf(buf, "struct %s_", n->name.str);
   } else {
@@ -1306,7 +1307,7 @@ void mk_struct_ptr_decoder(capnp_ctx_t *ctx, struct node *n) {
   }
 
   mapname = (char *)get_mapname(n->n.annotations);
-  
+
   if (mapname == NULL) {
     sprintf(buf, "struct %s_", n->name.str);
   } else {
@@ -2110,18 +2111,17 @@ static void declare_codec(capnp_ctx_t *ctx, struct node *file_node) {
   }
 }
 int ctx_init(capnp_ctx_t *ctx, FILE *fp) {
-  struct capn capn;
   struct capn_segment *current_seg = NULL;
   int total_len = 0;
   int i;
   struct node *n;
 
   memset(ctx, 0x0, sizeof(*ctx));
-  if (capn_init_fp(&capn, fp, 0) < 0) {
+  if (capn_init_fp(&(ctx->capn), fp, 0) < 0) {
     return -1;
   }
 
-  current_seg = capn.seglist;
+  current_seg = ctx->capn.seglist;
   while (current_seg != NULL) {
     total_len += current_seg->len;
     current_seg = current_seg->next;
@@ -2130,7 +2130,7 @@ int ctx_init(capnp_ctx_t *ctx, FILE *fp) {
   ctx->g_valseg.data = calloc(1, total_len);
   ctx->g_valseg.cap = total_len;
 
-  ctx->root.p = capn_getp(capn_root(&capn), 0, 1);
+  ctx->root.p = capn_getp(capn_root(&(ctx->capn)), 0, 1);
   read_CodeGeneratorRequest(&(ctx->req), ctx->root);
 
   for (i = 0; i < capn_len(ctx->req.nodes); i++) {
@@ -2518,12 +2518,13 @@ int main(int argc, char *argv[]) {
     }
   } else {
     fp = stdin;
-#if defined(_WIN32)
-    if (_setmode(_fileno(fp), _O_BINARY) == -1) {
-      fail(-1, "fail to set stdin to binary mode\n");
-    }
-#endif
   }
+
+#if defined(_WIN32)
+  if (_setmode(_fileno(fp), _O_BINARY) == -1) {
+    fail(-1, "fail to set stdin to binary mode\n");
+  }
+#endif
 
   ctx_init(&ctx, fp);
 
