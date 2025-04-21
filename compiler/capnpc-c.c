@@ -2017,11 +2017,11 @@ static void define_struct(capnp_ctx_t *ctx, struct node *n, const char *extattr,
         &(ctx->SRC),
         "\nvoid encode_%s(struct capn_segment *cs,struct %s *d, %s *s) {\n",
         n->name.str, n->name.str, buf);
-    str_addf(&(ctx->SRC), "%s\n", s.encoder);
+    str_addf(&(ctx->SRC), "%s\n", s.encoder.str);
     str_addf(&(ctx->SRC), "}\n");
     str_addf(&(ctx->SRC), "\nvoid decode_%s(%s *d, struct %s *s) {\n",
              n->name.str, buf, n->name.str);
-    str_addf(&(ctx->SRC), "%s\n", s.decoder);
+    str_addf(&(ctx->SRC), "%s\n", s.decoder.str);
     str_addf(&(ctx->SRC), "}\n");
   }
 

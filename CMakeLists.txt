@@ -9,8 +9,8 @@ project(c-capnproto LANGUAGES ${languages})
 
 include(CTest)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_EXTENSIONS NO)
+# set(CMAKE_C_STANDARD 11)
+# set(CMAKE_C_EXTENSIONS NO)
 if(BUILD_TESTING)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_EXTENSIONS NO)
@@ -170,6 +170,7 @@ if(C_CAPNPROTO_ENABLE_INSTALL)
     install(FILES lib/capnp_c.h TYPE INCLUDE)
 endif()
 
+add_subdirectory(examples/book)
 if(BUILD_TESTING AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(tests)
 endif()

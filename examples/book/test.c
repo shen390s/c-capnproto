@@ -6,7 +6,7 @@
 
 static void usage(char *app) {
     fprintf(stderr, "usage: %s encode | %s decode\n",
-	    app);
+	    app, app);
 }
 
 int encode() {
