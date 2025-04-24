@@ -43,10 +43,10 @@ int encode() {
     book.n_authors = 2;
     book.authors = authors;
     book.n_chapters = 3;
-    book.chapters = &chapters[0];
+    book.chapters_ = &chapters[0];
     memcpy(&(book.publish), &publish, sizeof(publish));
     book.n_magic1 = 2;
-    book.magic1 = &magic1[0];
+    book.magic_1 = &magic1[0];
     book.acquire_method = Book_acquire_buy;
     book.acquire.buy = "bought from Xinhua book store";
 
@@ -85,10 +85,10 @@ int decode() {
     
     printf("chapters(%d):\n", book.n_chapters);
     for(i = 0; i < book.n_chapters; i ++) {
-	printf("\tcaption: %s\n", book.chapters[i].caption);
+	printf("\tcaption: %s\n", book.chapters_[i].caption);
 	printf("\tfrom %d to %d\n",
-	       book.chapters[i].start,
-	       book.chapters[i].end);
+	       book.chapters_[i].start,
+	       book.chapters_[i].end);
     }
 
     printf("ISBN: %lu year: %u\n",
@@ -97,7 +97,7 @@ int decode() {
     
     printf("magic1:\n");
     for(i = 0; i < book.n_magic1; i ++) {
-	printf("\t%d\n", book.magic1[i]);
+	printf("\t%d\n", book.magic_1[i]);
     }
 
     if (book.acquire_method == Book_acquire_buy) {

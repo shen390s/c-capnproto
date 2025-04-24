@@ -1033,7 +1033,7 @@ static void gen_call_list_decoder(capnp_ctx_t *ctx, struct str *func,
       char *dtypename = n->name.str;
 
       str_addf(func, "decode_%s_list(&(d->%s), &(d->%s), s->%s);\n", dtypename,
-               countvar, var2, var);
+               countvar, var, var2);
     }
     break;
   }
@@ -1192,7 +1192,7 @@ static void decode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
         }
       }
 
-      gen_call_list_decoder(ctx, func, &list_type, tab, var, buf, var2);
+      gen_call_list_decoder(ctx, func, &list_type, tab, var2, buf, var);
     }
     break;
   default:

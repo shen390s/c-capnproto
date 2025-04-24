@@ -18,9 +18,9 @@ struct Publish $C.mapname("publish_t") {
 struct Book $C.mapname("book_t") {
   title   @0: Text;
   authors @1: List(Text) $C.mapname("authors") $C.maplistcount("n_authors");
-  chapters @5: List(Chapter) $C.maplistcount("n_chapters");
+  chapters @5: List(Chapter) $C.mapname("chapters_") $C.maplistcount("n_chapters");
   publish  @6: Publish;
-  magic1  @2: List(UInt32) $C.maplistcount("n_magic1");
+  magic1  @2: List(UInt32) $C.mapname("magic_1") $C.maplistcount("n_magic1");
   acquire :union $C.mapuniontag("acquire_method") {
     buy   @3: Text;
     donation @4: Text;
