@@ -1081,7 +1081,7 @@ static void encode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
 
     if (n != NULL) {
       str_add(func, tab, -1);
-      str_addf(func, "encode_%s_ptr(cs, &(d->%s), &(s->%s));\n", n->name.str,
+      str_addf(func, "encode_%s_ptr(cs, &(d->%s), s->%s);\n", n->name.str,
                var, var2);
     }
     break;
@@ -1315,12 +1315,14 @@ void mk_struct_ptr_decoder(capnp_ctx_t *ctx, struct node *n) {
   }
 
   str_addf(&(ctx->SRC),
-           "void decode_%s_ptr(%s *d,"
+           "void decode_%s_ptr(%s **d,"
            "%s_ptr p) {\n",
            n->name.str, buf, n->name.str);
   str_addf(&(ctx->SRC), "\tstruct %s s;\n", n->name.str);
+  str_addf(&(ctx->SRC), "\t*d = (%s *)calloc(1, sizeof(%s));\n",
+	   buf, buf);
   str_addf(&(ctx->SRC), "\tread_%s(&s, p);\n", n->name.str);
-  str_addf(&(ctx->SRC), "\tdecode_%s(d, &s);\n", n->name.str);
+  str_addf(&(ctx->SRC), "\tdecode_%s(*d, &s);\n", n->name.str);
   str_addf(&(ctx->SRC), "}\n");
 }
 
@@ -2092,7 +2094,7 @@ static void mk_codec_declares(capnp_ctx_t *ctx, const char *n1,
   str_addf(&(ctx->HDR),
            "void encode_%s_ptr(struct capn_segment*, %s_ptr *, %s *);\n", n1,
            n1, n2);
-  str_addf(&(ctx->HDR), "void decode_%s_ptr(%s *, %s_ptr);\n", n1, n2, n1);
+  str_addf(&(ctx->HDR), "void decode_%s_ptr(%s **, %s_ptr);\n", n1, n2, n1);
 }
 static void declare_codec(capnp_ctx_t *ctx, struct node *file_node) {
   struct node *n;

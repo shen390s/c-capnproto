@@ -44,7 +44,7 @@ int encode() {
     book.authors = authors;
     book.n_chapters = 3;
     book.chapters_ = &chapters[0];
-    memcpy(&(book.publish), &publish, sizeof(publish));
+    book.publish = &publish;
     book.n_magic1 = 2;
     book.magic_1 = &magic1[0];
     book.acquire_method = Book_acquire_buy;
@@ -67,7 +67,7 @@ int encode() {
 int decode() {
     struct capn c;
     Book_ptr p;
-    book_t  book;
+    book_t  *book;
     int i;
 
     capn_init_fp(&c, stdin, 0);
@@ -75,36 +75,36 @@ int decode() {
 
     decode_Book_ptr(&book, p);
 
-    printf("title: %s\n", book.title);
+    printf("title: %s\n", book->title);
 
-    printf("authors(%d):\n", book.n_authors);
+    printf("authors(%d):\n", book->n_authors);
     
-    for(i = 0; i < book.n_authors; i ++) {
-	printf("\t%s\n", book.authors[i]);
+    for(i = 0; i < book->n_authors; i ++) {
+	printf("\t%s\n", book->authors[i]);
     }
     
-    printf("chapters(%d):\n", book.n_chapters);
-    for(i = 0; i < book.n_chapters; i ++) {
-	printf("\tcaption: %s\n", book.chapters_[i].caption);
+    printf("chapters(%d):\n", book->n_chapters);
+    for(i = 0; i < book->n_chapters; i ++) {
+	printf("\tcaption: %s\n", book->chapters_[i].caption);
 	printf("\tfrom %d to %d\n",
-	       book.chapters_[i].start,
-	       book.chapters_[i].end);
+	       book->chapters_[i].start,
+	       book->chapters_[i].end);
     }
 
     printf("ISBN: %lu year: %u\n",
-	   book.publish.isbn,
-	   book.publish.year);
+	   book->publish->isbn,
+	   book->publish->year);
     
     printf("magic1:\n");
-    for(i = 0; i < book.n_magic1; i ++) {
-	printf("\t%d\n", book.magic_1[i]);
+    for(i = 0; i < book->n_magic1; i ++) {
+	printf("\t%d\n", book->magic_1[i]);
     }
 
-    if (book.acquire_method == Book_acquire_buy) {
-	printf("%s\n", book.acquire.buy);
+    if (book->acquire_method == Book_acquire_buy) {
+	printf("%s\n", book->acquire.buy);
     }
     else {
-	printf("%s\n", book.acquire.donation);
+	printf("%s\n", book->acquire.donation);
     }
     
     return 0;

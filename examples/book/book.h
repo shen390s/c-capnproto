@@ -22,7 +22,7 @@ typedef struct {
     char **authors;
     int   n_chapters;
     chapter_t *chapters_;
-    publish_t publish;
+    publish_t *publish;
     int   n_magic1;
     uint32_t *magic_1;
     int   acquire_method;
