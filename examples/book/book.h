@@ -17,12 +17,17 @@ typedef struct {
 } publish_t;
     
 typedef struct {
+    int null_;
+} nulldata_t;
+
+typedef struct {
     char *title;
     int   n_authors;
     char **authors;
     int   n_chapters;
     chapter_t *chapters_;
     publish_t *publish;
+    nulldata_t *nulldata;
     int   n_magic1;
     uint32_t *magic_1;
     int   acquire_method;

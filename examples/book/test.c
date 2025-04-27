@@ -44,7 +44,8 @@ int encode() {
     book.authors = authors;
     book.n_chapters = 3;
     book.chapters_ = &chapters[0];
-    book.publish = &publish;
+    book.publish = &publish ;
+    book.nulldata = NULL;
     book.n_magic1 = 2;
     book.magic_1 = &magic1[0];
     book.acquire_method = Book_acquire_buy;
