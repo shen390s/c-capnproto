@@ -30,6 +30,7 @@ typedef struct {
     nulldata_t *nulldata;
     int   n_magic1;
     uint32_t *magic_1;
+    char *description;
     int   acquire_method;
     union {
 	char *buy;

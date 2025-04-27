@@ -48,6 +48,7 @@ int encode() {
     book.nulldata = NULL;
     book.n_magic1 = 2;
     book.magic_1 = &magic1[0];
+    book.description = NULL;
     book.acquire_method = Book_acquire_buy;
     book.acquire.buy = "bought from Xinhua book store";
 

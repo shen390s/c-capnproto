@@ -27,6 +27,7 @@ struct Book $C.mapname("book_t") {
   publish  @6: Publish;
   nulldata @7: Nulldata;
   magic1  @2: List(UInt32) $C.mapname("magic_1") $C.maplistcount("n_magic1");
+  description @8: Text;
   acquire :union $C.mapuniontag("acquire_method") {
     buy   @3: Text;
     donation @4: Text;
