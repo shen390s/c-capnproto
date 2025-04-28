@@ -25,7 +25,7 @@ typedef struct {
     int   n_authors;
     char **authors;
     int   n_chapters;
-    chapter_t *chapters_;
+    chapter_t **chapters_;
     publish_t *publish;
     nulldata_t *nulldata;
     int   n_magic1;

@@ -1231,14 +1231,14 @@ void mk_struct_list_encoder(capnp_ctx_t *ctx, struct node *n) {
 
     str_addf(&(ctx->SRC),
              "void encode_%s_list(struct capn_segment *cs, %s_list *l,int "
-             "count,%s *s) {\n",
+             "count,%s **s) {\n",
              n->name.str, n->name.str, buf);
     str_addf(&(ctx->SRC), "\t%s_list lst;\n", n->name.str);
     str_addf(&(ctx->SRC), "\tint i;\n");
     str_addf(&(ctx->SRC), "\tlst = new_%s_list(cs, count);\n", n->name.str);
     str_addf(&(ctx->SRC), "\tfor(i = 0; i < count; i ++) {\n");
     str_addf(&(ctx->SRC), "\t\tstruct %s d;\n", n->name.str);
-    str_addf(&(ctx->SRC), "\t\tencode_%s(cs, &d, &(s[i]));\n", n->name.str);
+    str_addf(&(ctx->SRC), "\t\tencode_%s(cs, &d, s[i]);\n", n->name.str);
     str_addf(&(ctx->SRC), "\t\tset_%s(&d, lst, i);\n", n->name.str);
     str_addf(&(ctx->SRC), "\t}\n");
     str_addf(&(ctx->SRC), "\t(*l) = lst;\n");
@@ -1295,18 +1295,20 @@ void mk_struct_list_decoder(capnp_ctx_t *ctx, struct node *n) {
     }
 
     str_addf(&(ctx->SRC),
-             "void decode_%s_list(int *pcount, %s **d, %s_list list) {\n",
+             "void decode_%s_list(int *pcount, %s ***d, %s_list list) {\n",
              n->name.str, buf, n->name.str);
     str_addf(&(ctx->SRC), "\tint i;\n");
     str_addf(&(ctx->SRC), "\tint nc;\n");
-    str_addf(&(ctx->SRC), "\t%s *ptr;\n", buf);
+    str_addf(&(ctx->SRC), "\t%s **ptr;\n", buf);
     str_addf(&(ctx->SRC), "\tcapn_resolve(&(list.p));\n");
     str_addf(&(ctx->SRC), "\tnc = list.p.len;\n");
-    str_addf(&(ctx->SRC), "\tptr = (%s *)calloc(nc, sizeof(%s));\n", buf, buf);
+    str_addf(&(ctx->SRC), "\tptr = (%s **)calloc(nc, sizeof(%s *));\n", buf, buf);
     str_addf(&(ctx->SRC), "\tfor(i = 0; i < nc; i ++) {\n");
     str_addf(&(ctx->SRC), "\t\tstruct %s s;\n", n->name.str);
     str_addf(&(ctx->SRC), "\t\tget_%s(&s, list, i);\n", n->name.str);
-    str_addf(&(ctx->SRC), "\t\tdecode_%s(&(ptr[i]), &s);\n", n->name.str);
+    str_addf(&(ctx->SRC), "\t\tptr[i] = (%s *)calloc(1, sizeof(%s));\n",
+	     buf, buf);
+    str_addf(&(ctx->SRC), "\t\tdecode_%s(ptr[i], &s);\n", n->name.str);
     str_addf(&(ctx->SRC), "\t}\n");
     str_addf(&(ctx->SRC), "\t(*d) = ptr;\n");
     str_addf(&(ctx->SRC), "\t(*pcount) = nc;\n");
@@ -2102,9 +2104,9 @@ static void mk_codec_declares(capnp_ctx_t *ctx, const char *n1,
            n2);
   str_addf(&(ctx->HDR), "void decode_%s(%s *, struct %s *);\n", n1, n2, n1);
   str_addf(&(ctx->HDR),
-           "void encode_%s_list(struct capn_segment *,%s_list *, int, %s *);\n",
+           "void encode_%s_list(struct capn_segment *,%s_list *, int, %s **);\n",
            n1, n1, n2);
-  str_addf(&(ctx->HDR), "void decode_%s_list(int *, %s **, %s_list);\n", n1, n2,
+  str_addf(&(ctx->HDR), "void decode_%s_list(int *, %s ***, %s_list);\n", n1, n2,
            n1);
   str_addf(&(ctx->HDR),
            "void encode_%s_ptr(struct capn_segment*, %s_ptr *, %s *);\n", n1,

@@ -20,7 +20,7 @@ int encode() {
     uint32_t magic1[2] = {
 	1101,1012
     };
-    chapter_t chapters[3] = {
+    chapter_t chapters_[3] = {
 	{.caption ="Chapter1",
 	 .start =1,
 	 .end=99},
@@ -30,6 +30,9 @@ int encode() {
 	{.caption = "Chapter3",
 	 .start = 151,
 	 .end=199}
+    };
+    chapter_t* chapters[3] = {
+	&chapters_[0], &chapters_[1], &chapters_[2]
     };
     publish_t publish = {
 	.isbn = 335677,
@@ -87,10 +90,10 @@ int decode() {
     
     printf("chapters(%d):\n", book->n_chapters);
     for(i = 0; i < book->n_chapters; i ++) {
-	printf("\tcaption: %s\n", book->chapters_[i].caption);
+	printf("\tcaption: %s\n", book->chapters_[i]->caption);
 	printf("\tfrom %d to %d\n",
-	       book->chapters_[i].start,
-	       book->chapters_[i].end);
+	       book->chapters_[i]->start,
+	       book->chapters_[i]->end);
     }
 
     printf("ISBN: %lu year: %u\n",
