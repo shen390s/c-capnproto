@@ -112,6 +112,9 @@ int decode() {
 	printf("%s\n", book->acquire.donation);
     }
     
+    free_Book_ptr(&book);
+    capn_free(&c);
+    
     return 0;
 }
 

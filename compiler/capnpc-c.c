@@ -921,6 +921,31 @@ static void mk_simple_list_decoder(struct str *func, const char *tab,
   str_addf(func, "}\n");
 }
 
+static void mk_simple_list_free(struct str *func, const char *tab,
+                                const char *list_type, const char *getf,
+                                const char *dvar, const char *cvar,
+                                const char *svar) {
+  str_add(func, tab, -1);
+  str_addf(func, "if (1) {\n");
+  str_add(func, tab, -1);
+  str_addf(func, "\tint i_, nc_ = d->%s;\n", cvar);
+  if (strcmp(list_type, "text") == 0) {
+    str_add(func, tab, -1);
+    str_addf(func, "\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tif (d->%s[i_] == NULL) continue;\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tfree(d->%s[i_]);\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t}\n");
+  }
+
+  str_add(func, tab, -1);
+  str_addf(func, "\tfree(d->%s);\n", dvar);
+  str_add(func, tab, -1);
+  str_addf(func, "}\n");
+}
+
 static void gen_call_list_encoder(capnp_ctx_t *ctx, struct str *func,
                                   struct Type *type, const char *tab,
                                   const char *var, const char *countvar,
@@ -1034,6 +1059,77 @@ static void gen_call_list_decoder(capnp_ctx_t *ctx, struct str *func,
 
       str_addf(func, "decode_%s_list(&(d->%s), &(d->%s), s->%s);\n", dtypename,
                countvar, var, var2);
+    }
+    break;
+  }
+}
+
+static void gen_call_list_free(capnp_ctx_t *ctx, struct str *func,
+                               struct Type *type, const char *tab,
+                               const char *var, const char *countvar,
+                               const char *var2) {
+  char *t = NULL;
+  struct node *n = NULL;
+
+  str_add(func, tab, -1);
+
+  switch (type->which) {
+  case Type__bool:
+    t = "uint8_t";
+    mk_simple_list_free(func, tab, t, "get1", var, countvar, var2);
+    break;
+  case Type_int8:
+  case Type_uint8:
+    if (type->which == Type_int8) {
+      t = "int8_t";
+    } else {
+      t = "uint8_t";
+    }
+    mk_simple_list_free(func, tab, t, "get8", var, countvar, var2);
+    break;
+  case Type_int16:
+  case Type_uint16:
+    if (type->which == Type_int16) {
+      t = "int16_t";
+    } else {
+      t = "uint16_t";
+    }
+    mk_simple_list_free(func, tab, t, "get16", var, countvar, var2);
+    break;
+  case Type_int32:
+  case Type_uint32:
+  case Type_float32:
+    if (type->which == Type_int32) {
+      t = "int32_t";
+    } else if (type->which == Type_uint32) {
+      t = "uint32_t";
+    } else {
+      t = "float";
+    }
+    mk_simple_list_free(func, tab, t, "get32", var, countvar, var2);
+    break;
+  case Type_int64:
+  case Type_uint64:
+  case Type_float64:
+    if (type->which == Type_int64) {
+      t = "int64_t";
+    } else if (type->which == Type_uint64) {
+      t = "uint64_t";
+    } else {
+      t = "double";
+    }
+    mk_simple_list_free(func, tab, t, "get64", var, countvar, var2);
+    break;
+
+  case Type_text:
+    mk_simple_list_free(func, tab, "text", NULL, var, countvar, var2);
+    break;
+  case Type__struct:
+    n = find_node(ctx, type->_struct.typeId);
+    if (n != NULL) {
+      char *dtypename = n->name.str;
+
+      str_addf(func, "free_%s_list(d->%s, d->%s);\n", dtypename, countvar, var);
     }
     break;
   }
@@ -1214,6 +1310,93 @@ static void decode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
   }
 }
 
+static void free_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
+                        const char *tab, const char *var, const char *var2) {
+  struct Type list_type;
+  struct node *n = NULL;
+
+  if (f->v.t.which == Type__void) {
+    return;
+  }
+
+  if (var2 == NULL) {
+    var2 = var;
+  }
+
+  switch (f->v.t.which) {
+  case Type__bool:
+  case Type_int8:
+  case Type_int16:
+  case Type_int32:
+  case Type_int64:
+  case Type_uint8:
+  case Type_uint16:
+  case Type_uint32:
+  case Type_uint64:
+  case Type_float32:
+  case Type_float64:
+  case Type__enum:
+    break;
+  case Type_text:
+    str_add(func, tab, -1);
+    str_addf(func, "if (d->%s != NULL) {\n", var2);
+    str_add(func, tab, -1);
+    str_addf(func, "\tfree(d->%s);\n", var2);
+    str_add(func, tab, -1);
+    str_addf(func, "}\n");
+    break;
+  case Type__struct:
+    n = find_node(ctx, f->v.t._struct.typeId);
+    if (n != NULL) {
+      str_add(func, tab, -1);
+      str_addf(func, "free_%s_ptr(&(d->%s));\n", n->name.str, var2);
+    }
+    break;
+  case Type__list:
+    read_Type(&list_type, f->v.t._list.elementType);
+    if (list_type.which != Type__void) {
+      char *name = NULL;
+      char *ncount = NULL;
+      char buf[256];
+
+      name = (char *)get_mapname(f->f.annotations);
+      if (name == NULL) {
+        var2 = var;
+      } else {
+        var2 = name;
+      }
+
+      ncount = (char *)get_maplistcount(f->f.annotations);
+      if (ncount != NULL) {
+        sprintf(buf, "%s", ncount);
+      } else {
+        char buf2[256];
+        char *p;
+
+        strcpy(buf2, var2);
+        p = strchr(buf2, '.');
+        if (p != NULL) {
+          *p = 0x0;
+          p++;
+        }
+
+        strcpy(buf, buf2);
+        if (p != NULL) {
+          strcat(buf, ".");
+          sprintf(&buf[strlen(buf)], "n_%s", p);
+        }
+      }
+
+      gen_call_list_free(ctx, func, &list_type, tab, var2, buf, var);
+    }
+    break;
+  default:
+    str_add(func, tab, -1);
+    str_addf(func, "\t /* %s %s */\n", var2, var);
+    break;
+  }
+}
+
 void mk_struct_list_encoder(capnp_ctx_t *ctx, struct node *n) {
   if (n == NULL) {
     return;
@@ -1302,12 +1485,13 @@ void mk_struct_list_decoder(capnp_ctx_t *ctx, struct node *n) {
     str_addf(&(ctx->SRC), "\t%s **ptr;\n", buf);
     str_addf(&(ctx->SRC), "\tcapn_resolve(&(list.p));\n");
     str_addf(&(ctx->SRC), "\tnc = list.p.len;\n");
-    str_addf(&(ctx->SRC), "\tptr = (%s **)calloc(nc, sizeof(%s *));\n", buf, buf);
+    str_addf(&(ctx->SRC), "\tptr = (%s **)calloc(nc, sizeof(%s *));\n", buf,
+             buf);
     str_addf(&(ctx->SRC), "\tfor(i = 0; i < nc; i ++) {\n");
     str_addf(&(ctx->SRC), "\t\tstruct %s s;\n", n->name.str);
     str_addf(&(ctx->SRC), "\t\tget_%s(&s, list, i);\n", n->name.str);
-    str_addf(&(ctx->SRC), "\t\tptr[i] = (%s *)calloc(1, sizeof(%s));\n",
-	     buf, buf);
+    str_addf(&(ctx->SRC), "\t\tptr[i] = (%s *)calloc(1, sizeof(%s));\n", buf,
+             buf);
     str_addf(&(ctx->SRC), "\t\tdecode_%s(ptr[i], &s);\n", n->name.str);
     str_addf(&(ctx->SRC), "\t}\n");
     str_addf(&(ctx->SRC), "\t(*d) = ptr;\n");
@@ -1343,6 +1527,61 @@ void mk_struct_ptr_decoder(capnp_ctx_t *ctx, struct node *n) {
   str_addf(&(ctx->SRC), "}\n");
 }
 
+void mk_struct_list_free(capnp_ctx_t *ctx, struct node *n) {
+  if (n == NULL) {
+    return;
+  }
+
+  if (1) {
+    char *mapname = (char *)get_mapname(n->n.annotations);
+    char buf[256];
+
+    if (mapname == NULL) {
+      sprintf(buf, "struct %s_", n->name.str);
+    } else {
+      strcpy(buf, mapname);
+    }
+
+    str_addf(&(ctx->SRC), "void free_%s_list(int pcount, %s **d) {\n",
+             n->name.str, buf);
+    str_addf(&(ctx->SRC), "\tint i;\n");
+    str_addf(&(ctx->SRC), "\tint nc = pcount;\n");
+    str_addf(&(ctx->SRC), "\t%s **ptr = d;\n", buf);
+    str_addf(&(ctx->SRC), "\tif (ptr == NULL) return;\n");
+    str_addf(&(ctx->SRC), "\tfor(i = 0; i < nc; i ++) {\n");
+    str_addf(&(ctx->SRC), "\t\tif(ptr[i] == NULL) continue;\n");
+    str_addf(&(ctx->SRC), "\t\tfree_%s(ptr[i]);\n", n->name.str);
+    str_addf(&(ctx->SRC), "\t\tfree(ptr[i]);\n");
+    str_addf(&(ctx->SRC), "\t}\n");
+    str_addf(&(ctx->SRC), "\tfree(ptr);\n");
+    str_addf(&(ctx->SRC), "}\n");
+  }
+}
+
+void mk_struct_ptr_free(capnp_ctx_t *ctx, struct node *n) {
+  char *mapname;
+  char buf[256];
+
+  if (n == NULL) {
+    return;
+  }
+
+  mapname = (char *)get_mapname(n->n.annotations);
+
+  if (mapname == NULL) {
+    sprintf(buf, "struct %s_", n->name.str);
+  } else {
+    strcpy(buf, mapname);
+  }
+
+  str_addf(&(ctx->SRC), "void free_%s_ptr(%s **d){\n", n->name.str, buf);
+  str_addf(&(ctx->SRC), "\tif((*d) == NULL) return;\n");
+  str_addf(&(ctx->SRC), "\tfree_%s(*d);\n", n->name.str);
+  str_addf(&(ctx->SRC), "\tfree(*d);\n");
+  str_addf(&(ctx->SRC), "\t(*d) = NULL;\n");
+  str_addf(&(ctx->SRC), "}\n");
+}
+
 struct strings {
   struct str ftab;
   struct str dtab;
@@ -1350,6 +1589,7 @@ struct strings {
   struct str set;
   struct str encoder;
   struct str decoder;
+  struct str freeup;
   struct str enums;
   struct str decl;
   struct str var;
@@ -1516,6 +1756,8 @@ static void union_block(capnp_ctx_t *ctx, struct strings *s, struct field *f,
     str_addf(&s->encoder, "%sbreak;\n", s->ftab.str);
     decode_member(ctx, &s->decoder, f, s->ftab.str, var1, var2);
     str_addf(&s->decoder, "%sbreak;\n", s->ftab.str);
+    free_member(ctx, &s->freeup, f, s->ftab.str, var1, var2);
+    str_addf(&s->freeup, "%sbreak;\n", s->ftab.str);
   }
   str_setlen(&s->ftab, s->ftab.len - 1);
 }
@@ -1548,6 +1790,8 @@ static void union_cases(capnp_ctx_t *ctx, struct strings *s, struct node *n,
                field_name(f));
       str_addf(&s->decoder, "%scase %s_%s:\n", s->ftab.str, n->name.str,
                field_name(f));
+      str_addf(&s->freeup, "%scase %s_%s:\n", s->ftab.str, n->name.str,
+               field_name(f));
     }
 
     if (u) {
@@ -1573,11 +1817,13 @@ static void declare_slot(struct strings *s, struct field *f) {
 
 static void define_group(capnp_ctx_t *ctx, struct strings *s, struct node *n,
                          const char *group_name, bool enclose_unions,
-                         const char *extattr, const char *extattr_space);
+                         const char *extattr, const char *extattr_space,
+                         const char *uniontag);
 
 static void do_union(capnp_ctx_t *ctx, struct strings *s, struct node *n,
                      struct field *first_field, const char *union_name,
-                     const char *extattr, const char *extattr_space) {
+                     const char *extattr, const char *extattr_space,
+                     const char *uniontag) {
   int tagoff = 2 * n->n._struct.discriminantOffset;
   struct field *f;
   static struct str tag = STR_INIT;
@@ -1617,6 +1863,7 @@ static void do_union(capnp_ctx_t *ctx, struct strings *s, struct node *n,
 
     str_addf(&s->encoder, "%sswitch (%s) {\n", s->ftab.str, var);
     str_addf(&s->decoder, "%sswitch (%s) {\n", s->ftab.str, tag.str);
+    str_addf(&s->freeup, "%sswitch (%s) {\n", s->ftab.str, uniontag);
   }
 
   /* if we have a bunch of the same C type with zero defaults, we
@@ -1660,12 +1907,13 @@ static void do_union(capnp_ctx_t *ctx, struct strings *s, struct node *n,
       // own struct so that its members do not overwrite its own
       // discriminant.
       define_group(ctx, s, f->group, field_name(f), true, extattr,
-                   extattr_space);
+                   extattr_space, uniontag);
       str_addf(&s->get, "%sbreak;\n", s->ftab.str);
       str_addf(&s->set, "%sbreak;\n", s->ftab.str);
       if (ctx->g_codecgen) {
         str_addf(&s->encoder, "%sbreak;\n", s->ftab.str);
         str_addf(&s->decoder, "%sbreak;\n", s->ftab.str);
+        str_addf(&s->freeup, "%sbreak;\n", s->ftab.str);
       }
       str_setlen(&s->ftab, s->ftab.len - 1);
       break;
@@ -1681,6 +1929,8 @@ static void do_union(capnp_ctx_t *ctx, struct strings *s, struct node *n,
           str_addf(&s->encoder, "%scase %s_%s:\n", s->ftab.str, n->name.str,
                    field_name(f));
           str_addf(&s->decoder, "%scase %s_%s:\n", s->ftab.str, n->name.str,
+                   field_name(f));
+          str_addf(&s->freeup, "%scase %s_%s:\n", s->ftab.str, n->name.str,
                    field_name(f));
         }
         union_block(
@@ -1713,6 +1963,8 @@ static void do_union(capnp_ctx_t *ctx, struct strings *s, struct node *n,
              s->ftab.str, s->ftab.str);
     str_addf(&s->decoder, "%sdefault:\n%s\tbreak;\n%s}\n", s->ftab.str,
              s->ftab.str, s->ftab.str);
+    str_addf(&s->freeup, "%sdefault:\n%s\tbreak;\n%s}\n", s->ftab.str,
+             s->ftab.str, s->ftab.str);
   }
 
   str_addf(&enums, "\n};\n");
@@ -1736,11 +1988,16 @@ static void define_field(capnp_ctx_t *ctx, struct strings *s, struct field *f,
                     get_mapname(f->f.annotations));
       decode_member(ctx, &s->decoder, f, s->ftab.str, field_name(f),
                     get_mapname(f->f.annotations));
+      free_member(ctx, &s->freeup, f, s->ftab.str, field_name(f),
+                  get_mapname(f->f.annotations));
     }
     break;
 
   case Field_group:
     if (ctx->g_codecgen) {
+      char uniontagvar[256];
+
+      memset(uniontagvar, 0x0, sizeof(uniontagvar));
       if (f->group != NULL) {
         int flen = capn_len(f->group->n._struct.fields);
         int ulen = f->group->n._struct.discriminantCount;
@@ -1760,12 +2017,16 @@ static void define_field(capnp_ctx_t *ctx, struct strings *s, struct field *f,
                      buf);
             str_addf(&s->decoder, "\td->%s = s->%s_which;\n", buf,
                      field_name(f));
+            sprintf(uniontagvar, "d->%s", buf);
           }
         }
       }
+      define_group(ctx, s, f->group, field_name(f), false, extattr,
+                   extattr_space, uniontagvar);
+    } else {
+      define_group(ctx, s, f->group, field_name(f), false, extattr,
+                   extattr_space, NULL);
     }
-    define_group(ctx, s, f->group, field_name(f), false, extattr,
-                 extattr_space);
     break;
   }
 }
@@ -1814,7 +2075,8 @@ static void define_encode_function(capnp_ctx_t *ctx, struct node *node,
                                    const char *extattr_space) {}
 static void define_group(capnp_ctx_t *ctx, struct strings *s, struct node *n,
                          const char *group_name, bool enclose_unions,
-                         const char *extattr, const char *extattr_space) {
+                         const char *extattr, const char *extattr_space,
+                         const char *uniontag) {
   struct field *f;
   int flen = capn_len(n->n._struct.fields);
   int ulen = n->n._struct.discriminantCount;
@@ -1879,7 +2141,7 @@ static void define_group(capnp_ctx_t *ctx, struct strings *s, struct node *n,
     const bool keep_union_name = named_union && !enclose_unions;
 
     do_union(ctx, s, n, f, keep_union_name ? group_name : NULL, extattr,
-             extattr_space);
+             extattr_space, uniontag);
 
     while (f < n->fields + flen && in_union(f))
       f++;
@@ -1916,6 +2178,7 @@ static void define_struct(capnp_ctx_t *ctx, struct node *n, const char *extattr,
   str_reset(&s.set);
   str_reset(&s.encoder);
   str_reset(&s.decoder);
+  str_reset(&s.freeup);
   str_reset(&s.enums);
   str_reset(&s.decl);
   str_reset(&s.var);
@@ -1942,7 +2205,7 @@ static void define_struct(capnp_ctx_t *ctx, struct node *n, const char *extattr,
     }
   }
 
-  define_group(ctx, &s, n, NULL, false, extattr, extattr_space);
+  define_group(ctx, &s, n, NULL, false, extattr, extattr_space, NULL);
 
   str_add(&(ctx->HDR), s.enums.str, s.enums.len);
 
@@ -2043,6 +2306,9 @@ static void define_struct(capnp_ctx_t *ctx, struct node *n, const char *extattr,
              n->name.str, buf, n->name.str);
     str_addf(&(ctx->SRC), "%s\n", s.decoder.str);
     str_addf(&(ctx->SRC), "}\n");
+    str_addf(&(ctx->SRC), "\nvoid free_%s(%s *d) {\n", n->name.str, buf);
+    str_addf(&(ctx->SRC), "%s\n", s.freeup.str);
+    str_addf(&(ctx->SRC), "}\n");
   }
 
   str_add(&(ctx->SRC), s.pub_get.str, s.pub_get.len);
@@ -2103,15 +2369,19 @@ static void mk_codec_declares(capnp_ctx_t *ctx, const char *n1,
            "void encode_%s(struct capn_segment *,struct %s *, %s *);\n", n1, n1,
            n2);
   str_addf(&(ctx->HDR), "void decode_%s(%s *, struct %s *);\n", n1, n2, n1);
-  str_addf(&(ctx->HDR),
-           "void encode_%s_list(struct capn_segment *,%s_list *, int, %s **);\n",
-           n1, n1, n2);
-  str_addf(&(ctx->HDR), "void decode_%s_list(int *, %s ***, %s_list);\n", n1, n2,
-           n1);
+  str_addf(&(ctx->HDR), "void free_%s(%s *);\n", n1, n2);
+  str_addf(
+      &(ctx->HDR),
+      "void encode_%s_list(struct capn_segment *,%s_list *, int, %s **);\n", n1,
+      n1, n2);
+  str_addf(&(ctx->HDR), "void decode_%s_list(int *, %s ***, %s_list);\n", n1,
+           n2, n1);
+  str_addf(&(ctx->HDR), "void free_%s_list(int, %s **);\n", n1, n2);
   str_addf(&(ctx->HDR),
            "void encode_%s_ptr(struct capn_segment*, %s_ptr *, %s *);\n", n1,
            n1, n2);
   str_addf(&(ctx->HDR), "void decode_%s_ptr(%s **, %s_ptr);\n", n1, n2, n1);
+  str_addf(&(ctx->HDR), "void free_%s_ptr(%s **);\n", n1, n2);
 }
 static void declare_codec(capnp_ctx_t *ctx, struct node *file_node) {
   struct node *n;
@@ -2434,6 +2704,8 @@ int ctx_gen(capnp_ctx_t *ctx) {
         mk_struct_ptr_encoder(ctx, n);
         mk_struct_list_decoder(ctx, n);
         mk_struct_ptr_decoder(ctx, n);
+        mk_struct_list_free(ctx, n);
+        mk_struct_ptr_free(ctx, n);
       }
     }
 

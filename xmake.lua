@@ -49,6 +49,8 @@ target("book")
 	add_files("examples/book/*.c")
 	add_includedirs("compiler","lib","examples/book")
 	add_deps("CapnC_Runtime", "capnpc-c")
+	add_cflags("-fsanitize=address")
+	add_ldflags("-fsanitize=address")
 
 xpack("capnpc-c")
 	set_formats("targz")
