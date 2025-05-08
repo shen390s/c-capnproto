@@ -38,6 +38,13 @@ int encode() {
 	.isbn = 335677,
 	.year =2001
     };
+    buy_t buy = {
+	.from = "Xinghua Book store",
+	.with_recipe = Buy_u_recipeAddr,
+	.u = {
+	    .recipe_addr = "Xinghua Street"
+	}
+    };
     struct capn_segment *cs;
     struct Book b;
     Book_ptr p;
@@ -53,7 +60,7 @@ int encode() {
     book.magic_1 = &magic1[0];
     book.description = NULL;
     book.acquire_method = Book_acquire_buy;
-    book.acquire.buy = "bought from Xinhua book store";
+    book.acquire.buy = &buy;
 
     capn_init_malloc(&c);
     cs = capn_root(&c).seg;
@@ -106,7 +113,11 @@ int decode() {
     }
 
     if (book->acquire_method == Book_acquire_buy) {
-	printf("%s\n", book->acquire.buy);
+	printf("buy from %s\n", book->acquire.buy->from);
+	if (book->acquire.buy->with_recipe == Buy_u_recipeAddr) {
+	    printf("recipe address %s\n",
+		   book->acquire.buy->u.recipe_addr);
+	}
     }
     else {
 	printf("%s\n", book->acquire.donation);
