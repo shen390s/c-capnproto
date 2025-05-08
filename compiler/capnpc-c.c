@@ -929,6 +929,8 @@ static void mk_simple_list_free(struct str *func, const char *tab,
   str_addf(func, "if (1) {\n");
   str_add(func, tab, -1);
   str_addf(func, "\tint i_, nc_ = d->%s;\n", cvar);
+  str_add(func, tab, -1);
+  str_addf(func, "\tcapnp_use(i_);capnp_use(nc_);\n");
   if (strcmp(list_type, "text") == 0) {
     str_add(func, tab, -1);
     str_addf(func, "\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
