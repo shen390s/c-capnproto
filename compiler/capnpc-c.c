@@ -1453,15 +1453,18 @@ void mk_struct_ptr_encoder(capnp_ctx_t *ctx, struct node *n) {
            n->name.str, n->name.str, buf);
   str_addf(&(ctx->SRC), "\t%s_ptr ptr;\n", n->name.str);
   str_addf(&(ctx->SRC), "\tstruct %s d;\n", n->name.str);
-  str_addf(&(ctx->SRC), "\t%s zero_ = {0}; \n", buf);
   str_addf(&(ctx->SRC), "\tptr = new_%s(cs);\n", n->name.str);
   str_addf(&(ctx->SRC), "\tif (s == NULL) {\n");
-  str_addf(&(ctx->SRC), "\t\ts = &zero_;\n");
+  str_addf(&(ctx->SRC), "\t\tptr.p = capn_null;\n",
+	  n->name.str);
   str_addf(&(ctx->SRC), "\t}\n");
-  str_addf(&(ctx->SRC), "\tencode_%s(cs, &d, s);\n", n->name.str);
-  str_addf(&(ctx->SRC), "\twrite_%s(&d, ptr);\n", n->name.str);
+  str_addf(&(ctx->SRC), "\telse{\n");
+  str_addf(&(ctx->SRC), "\t\tencode_%s(cs, &d, s);\n", n->name.str);
+  str_addf(&(ctx->SRC), "\t\twrite_%s(&d, ptr);\n", n->name.str);
+  str_addf(&(ctx->SRC), "\t}\n");
   str_addf(&(ctx->SRC), "\t(*p) = ptr;\n");
   str_addf(&(ctx->SRC), "}\n");
+  ctx->g_nullused = 1;
 }
 
 void mk_struct_list_decoder(capnp_ctx_t *ctx, struct node *n) {
@@ -1523,10 +1526,17 @@ void mk_struct_ptr_decoder(capnp_ctx_t *ctx, struct node *n) {
            "%s_ptr p) {\n",
            n->name.str, buf, n->name.str);
   str_addf(&(ctx->SRC), "\tstruct %s s;\n", n->name.str);
+  str_addf(&(ctx->SRC), "\tcapn_resolve(&(p.p));\n");
+  str_addf(&(ctx->SRC), "\tif (p.p.type == CAPN_NULL) {\n",
+	  n->name.str);
+  str_addf(&(ctx->SRC), "\t\t(*d) = NULL;\n");
+  str_addf(&(ctx->SRC), "\t\treturn;\n");
+  str_addf(&(ctx->SRC), "\t}\n");
   str_addf(&(ctx->SRC), "\t*d = (%s *)calloc(1, sizeof(%s));\n", buf, buf);
   str_addf(&(ctx->SRC), "\tread_%s(&s, p);\n", n->name.str);
   str_addf(&(ctx->SRC), "\tdecode_%s(*d, &s);\n", n->name.str);
   str_addf(&(ctx->SRC), "}\n");
+  ctx->g_nullused = 1;
 }
 
 void mk_struct_list_free(capnp_ctx_t *ctx, struct node *n) {
