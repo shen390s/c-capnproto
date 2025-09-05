@@ -163,6 +163,7 @@ endif()
 
 option(C_CAPNPROTO_ENABLE_INSTALL "Add instructions for 'cmake --install' of CapnC_Runtime library and capnpc-c executable" ON)
 if(C_CAPNPROTO_ENABLE_INSTALL)
+    set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
     install(TARGETS CapnC_Runtime capnpc-c
             EXPORT CapnC)
     install(EXPORT CapnC
@@ -170,7 +171,7 @@ if(C_CAPNPROTO_ENABLE_INSTALL)
             NAMESPACE CapnC::
             FILE CapnCConfig.cmake)
     install(FILES lib/capnp_c.h TYPE INCLUDE)
-    install(FILES c-capnproto.pc 
+    install(FILES build/c-capnproto.pc 
 	    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 endif()
 
