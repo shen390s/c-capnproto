@@ -8,5 +8,5 @@ codegen=${bindir}/capnpc-c
 Name: c-capnproto
 Description: Cap'n Proto C bindings
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lcapnp_c
+Libs: -L${libdir} -lCapnC_Runtime
 Cflags: -I${includedir}
