@@ -7,6 +7,8 @@ else()
 endif()
 project(c-capnproto LANGUAGES ${languages})
 
+configure_file(c-capnproto.pc.in c-capnproto.pc)
+
 include(CTest)
 
 # set(CMAKE_C_STANDARD 11)
@@ -168,6 +170,8 @@ if(C_CAPNPROTO_ENABLE_INSTALL)
             NAMESPACE CapnC::
             FILE CapnCConfig.cmake)
     install(FILES lib/capnp_c.h TYPE INCLUDE)
+    install(FILES c-capnproto.pc 
+	    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 endif()
 
 add_subdirectory(examples/book)
