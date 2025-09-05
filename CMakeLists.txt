@@ -7,7 +7,7 @@ else()
 endif()
 project(c-capnproto LANGUAGES ${languages})
 
-configure_file(c-capnproto.pc.in c-capnproto.pc)
+configure_file(c-capnproto.pc.in c-capnproto.pc @ONLY)
 
 include(CTest)
 
