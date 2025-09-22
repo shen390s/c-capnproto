@@ -891,19 +891,21 @@ static void mk_simple_list_decoder(struct str *func, const char *tab,
     str_add(func, tab, -1);
     str_addf(func, "\t\td->%s = NULL;\n", dvar);
     str_add(func, tab, -1);
-    str_addf(func, "\t\treturn;\n");
-    str_add(func, tab, -1);
     str_addf(func, "\t}\n");
     str_add(func, tab, -1);
-    str_addf(func, "\td->%s = (char **)calloc(nc_, sizeof(char *));\n", dvar);
+    str_addf(func, "\telse {\n");
     str_add(func, tab, -1);
-    str_addf(func, "\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
+    str_addf(func, "\t\td->%s = (char **)calloc(nc_, sizeof(char *));\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
     str_add(func, tab, -1);
     str_addf(func,
-             "\t\tcapn_text text_ = capn_get_text(s->%s, i_, capn_val0);\n",
+             "\t\t\tcapn_text text_ = capn_get_text(s->%s, i_, capn_val0);\n",
              svar);
     str_add(func, tab, -1);
-    str_addf(func, "\t\td->%s[i_] = strdup(text_.str);\n", dvar);
+    str_addf(func, "\t\t\td->%s[i_] = strdup(text_.str);\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t}\n");
     str_add(func, tab, -1);
     str_addf(func, "\t}\n");
   } else {
@@ -916,16 +918,18 @@ static void mk_simple_list_decoder(struct str *func, const char *tab,
     str_add(func, tab, -1);
     str_addf(func, "\t\td->%s = NULL;\n", dvar);
     str_add(func, tab, -1);
-    str_addf(func, "\t\treturn;\n");
-    str_add(func, tab, -1);
     str_addf(func, "\t}\n");
     str_add(func, tab, -1);
-    str_addf(func, "\td->%s = (%s *)calloc(nc_, sizeof(%s));\n", dvar,
+    str_addf(func, "\telse {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\td->%s = (%s *)calloc(nc_, sizeof(%s));\n", dvar,
              list_type, list_type);
     str_add(func, tab, -1);
-    str_addf(func, "\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
+    str_addf(func, "\t\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
     str_add(func, tab, -1);
-    str_addf(func, "\t\td->%s[i_] = capn_%s(s->%s, i_);\n", dvar, getf, svar);
+    str_addf(func, "\t\t\td->%s[i_] = capn_%s(s->%s, i_);\n", dvar, getf, svar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t}\n");
     str_add(func, tab, -1);
     str_addf(func, "\t}\n");
   }
