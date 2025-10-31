@@ -903,7 +903,7 @@ static void mk_simple_list_decoder(struct str *func, const char *tab,
              "\t\t\tcapn_text text_ = capn_get_text(s->%s, i_, capn_val0);\n",
              svar);
     str_add(func, tab, -1);
-    str_addf(func, "\t\t\td->%s[i_] = strdup(text_.str);\n", dvar);
+    str_addf(func, "\t\t\td->%s[i_] = STRING_DUP(text_.str);\n", dvar);
     str_add(func, tab, -1);
     str_addf(func, "\t\t}\n");
     str_add(func, tab, -1);
@@ -1276,7 +1276,7 @@ static void decode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
     break;
   case Type_text:
     str_add(func, tab, -1);
-    str_addf(func, "d->%s = strdup(s->%s.str);\n", var2, var);
+    str_addf(func, "d->%s = STRING_DUP(s->%s.str);\n", var2, var);
     break;
   case Type__struct:
     n = find_node(ctx, f->v.t._struct.typeId);
@@ -2675,6 +2675,11 @@ int ctx_gen(capnp_ctx_t *ctx) {
     }
     str_addf(&(ctx->HDR), "\n");
 
+    str_addf(&(ctx->HDR),
+             "#ifndef STRING_DUP\n"
+             "#define STRING_DUP strdup\n"
+             "#endif\n\n");
+    
     str_addf(&(ctx->HDR), "#if CAPN_VERSION != 1\n");
     str_addf(
         &(ctx->HDR),
