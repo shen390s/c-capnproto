@@ -139,6 +139,10 @@ add_runtime_library(NAME_SUFFIX -StaticExports      EXCLUDE_FROM_ALL MODE STATIC
 
 add_executable(capnpc-c
         compiler/capnpc-c.c
+        compiler/codegen.c
+        compiler/codegen_codec.c
+        compiler/ctx.c
+        compiler/resolve.c
         compiler/schema.capnp.c
         compiler/str.c)
 target_link_libraries(capnpc-c CapnC::Runtime)

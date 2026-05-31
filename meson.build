@@ -26,6 +26,10 @@ libcapnp_dep = declare_dependency(
 
 capnpc_src = [
   'compiler' / 'capnpc-c.c',
+  'compiler' / 'codegen.c',
+  'compiler' / 'codegen_codec.c',
+  'compiler' / 'ctx.c',
+  'compiler' / 'resolve.c',
   'compiler' / 'schema.capnp.c',
   'compiler' / 'str.c'
 ]
