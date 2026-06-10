@@ -35,6 +35,18 @@ if ! diff -u "$ROOT_DIR/compiler/golden/addressbook.capnp.c" "$TMPDIR/addressboo
   fail=1
 fi
 
+# Test 3: group-in-union.capnp (codecgen with :group inside union)
+capnp compile -o "$CAPNPC_C:$TMPDIR" --src-prefix="$ROOT_DIR/tests" \
+  -I "$ROOT_DIR/compiler" "$ROOT_DIR/tests/group-in-union.capnp"
+if ! diff -u "$ROOT_DIR/compiler/golden/group-in-union.capnp.h" "$TMPDIR/group-in-union.capnp.h"; then
+  echo "FAIL: group-in-union.capnp.h differs"
+  fail=1
+fi
+if ! diff -u "$ROOT_DIR/compiler/golden/group-in-union.capnp.c" "$TMPDIR/group-in-union.capnp.c"; then
+  echo "FAIL: group-in-union.capnp.c differs"
+  fail=1
+fi
+
 if [ $fail -eq 0 ]; then
   echo "OK: all golden files match"
 fi

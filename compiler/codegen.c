@@ -908,6 +908,14 @@ static void do_union(capnp_ctx_t *ctx, struct strings *s, struct node *n,
                field_name(&ctx->scratch[2], f));
       str_addf(&s->set, "%scase %s_%s:\n", tabs(s->findent), n->name.str,
                field_name(&ctx->scratch[2], f));
+      if (ctx->g_codecgen) {
+        str_addf(&s->encoder, "%scase %s_%s:\n", tabs(s->findent), n->name.str,
+                 field_name(&ctx->scratch[2], f));
+        str_addf(&s->decoder, "%scase %s_%s:\n", tabs(s->findent), n->name.str,
+                 field_name(&ctx->scratch[2], f));
+        str_addf(&s->freeup, "%scase %s_%s:\n", tabs(s->findent), n->name.str,
+                 field_name(&ctx->scratch[2], f));
+      }
       s->findent++;
       // When we add a union inside a union, we need to enclose it in its
       // own struct so that its members do not overwrite its own
@@ -990,12 +998,18 @@ static void define_field(capnp_ctx_t *ctx, struct strings *s, struct field *f,
     get_member(ctx, &s->get, f, "p.p", tabs(s->findent),
                strf(&ctx->scratch[3], "%s%s", s->var.str, field_name(&ctx->scratch[2], f)));
     if (ctx->g_codecgen) {
-      encode_member(ctx, &s->encoder, f, tabs(s->findent), field_name(&ctx->scratch[2], f),
-                    get_mapname(f->f.annotations));
-      decode_member(ctx, &s->decoder, f, tabs(s->findent), field_name(&ctx->scratch[2], f),
-                    get_mapname(f->f.annotations));
-      free_member(ctx, &s->freeup, f, tabs(s->findent), field_name(&ctx->scratch[2], f),
-                  get_mapname(f->f.annotations));
+      struct str codec_var = STR_INIT;
+      const char *mapname = get_mapname(f->f.annotations);
+      /* s->var.str is "s->prefix.", strip "s->" to get the group path */
+      const char *group_prefix = s->var.str + 3;
+      strf(&codec_var, "%s%s", group_prefix, field_name(&ctx->scratch[2], f));
+      encode_member(ctx, &s->encoder, f, tabs(s->findent), codec_var.str,
+                    mapname);
+      decode_member(ctx, &s->decoder, f, tabs(s->findent), codec_var.str,
+                    mapname);
+      free_member(ctx, &s->freeup, f, tabs(s->findent), codec_var.str,
+                  mapname);
+      str_release(&codec_var);
     }
     break;
 
