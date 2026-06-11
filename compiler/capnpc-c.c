@@ -270,12 +270,14 @@ int ctx_gen(capnp_ctx_t *ctx) {
     for (n = file_node->file_nodes; n != NULL; n = n->next_file_node) {
       if (n->n.which == Node__struct && !n->n._struct.isGroup) {
         define_struct(ctx, n, extattr, extattr_space);
-        mk_struct_list_encoder(ctx, n);
-        mk_struct_ptr_encoder(ctx, n);
-        mk_struct_list_decoder(ctx, n);
-        mk_struct_ptr_decoder(ctx, n);
-        mk_struct_list_free(ctx, n);
-        mk_struct_ptr_free(ctx, n);
+        if (ctx->g_codecgen) {
+          mk_struct_list_encoder(ctx, n);
+          mk_struct_ptr_encoder(ctx, n);
+          mk_struct_list_decoder(ctx, n);
+          mk_struct_ptr_decoder(ctx, n);
+          mk_struct_list_free(ctx, n);
+          mk_struct_ptr_free(ctx, n);
+        }
       }
     }
 
