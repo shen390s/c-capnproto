@@ -1,166 +1,488 @@
 # capnpc-c
 
-This is a C plugin for [Cap'n Proto](http://kentonv.github.io/capnproto), an
-efficient protocol for sharing data and capabilities.
+A C code generator plugin for [Cap'n Proto](https://capnproto.org/), an efficient protocol for sharing data and capabilities.
 
-This is a fork of <https://github.com/opensourcerouting/c-capnproto> with support
-for CMake and Windows, a build matrix that includes Android and Windows, and
-fixes several bugs that start with the [CHANGES for version 0.9.0](./CHANGES.md#090).
+Given a `.capnp` schema file, `capnpc-c` generates C structs, read/write functions, and optionally higher-level codec (encode/decode/free) functions that convert between wire-format structs and your own application-defined C types.
 
-The fork is maintained as part of [DkML](https://diskuv.com/dkmlbook/)
-and [DkSDK](https://diskuv.com/cmake/help/latest/), but PRs are welcome from
-anybody. If you are looking for your first PR, fixing the false positive
-memory leaks in the test code would be great!
+> **Security warning:** The generated code assumes all input to be trusted.
+> Do NOT use with untrusted input. There is currently no bounds-checking on
+> structures or pointers.
 
-## Security warning
+## Prerequisites
 
-> The generated code assumes all input to be trusted. Do NOT use with
-> untrusted input! There is currently no code in place to check if
-> structures/pointers are within bounds.
+- [Cap'n Proto](https://capnproto.org/install.html) compiler (`capnp`) installed and on your PATH
+- A C99 compiler (gcc, clang, MSVC)
+- [Meson](https://mesonbuild.com/) build system (>= 1.0.0) and [Ninja](https://ninja-build.org/)
 
-This is only the code generator plugin, to properly make use of it you
-need to download, build and install capnpc and then build and install
-this project and then you can utilize it as:
+## Building
 
 ```sh
-capnpc compiler/test.capnp -oc
-```
-
-## Building on Linux
-
-```sh
-git clone https://gitlab.com/dkml/ext/c-capnproto.git
+git clone <this-repo>
 cd c-capnproto
-cmake --preset=ci-linux_x86_64
-cmake --build --preset=ci-tests
+meson setup build
+meson compile -C build
 ```
 
-## Building on Windows
+This builds:
+- `libcapnp` — the runtime library
+- `capnpc-c` — the code generator plugin
 
-You will need Visual Studio 2019 installed. Other versions of Visual Studio may work; they simply haven't been tested.
-
-Once you have Visual Studio, run the `x64 Native Tools Command Prompt for VS 2019` and type the following:
+### Running tests
 
 ```sh
-git clone https://gitlab.com/dkml/ext/c-capnproto.git
-cd c-capnproto
-cmake --preset=ci-windows_x86_64
-cmake --build --preset=ci-tests
+meson test -C build
 ```
+
+### Build options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `enable_tests` | `true` | Build unit tests |
+| `b_sanitize` | (none) | Enable sanitizers, e.g. `address`, `undefined` |
+
+Example with address sanitizer:
+
+```sh
+meson setup build -Db_sanitize=address
+meson compile -C build
+meson test -C build
+```
+
+### Installing
+
+```sh
+meson install -C build
+```
+
+This installs:
+- `capnpc-c` to `$prefix/bin/`
+- `libcapnp` to `$prefix/lib/`
+- `capnp_c.h` to `$prefix/include/`
 
 ## Usage
 
-### Generating C code from a `.capnp` schema file
+### Generating C code from a schema
 
-The `compiler` directory contains the C language plugin (`capnpc-c`) for use with the `capnp` tool: <https://capnproto.org/capnp-tool.html>.
-
-`capnp` will by default search `$PATH` for `capnpc-c` - if it's on your PATH, you can generate code for your schema as follows:
+If `capnpc-c` is on your PATH:
 
 ```sh
 capnp compile -o c myschema.capnp
 ```
 
-Otherwise, you can specify the path to the c plugin:
+Otherwise, specify the path explicitly:
 
 ```sh
-capnp compile -o ./capnpc-c myschema.capnp
+capnp compile -o /path/to/capnpc-c myschema.capnp
 ```
 
-`capnp` generates a C struct that corresponds to each capn proto struct, along with read/write functions that convert to/from capn proto form.
+This produces `myschema.capnp.c` and `myschema.capnp.h` in the current directory.
 
-#### fieldgetset
+To specify an output directory:
 
-If you want accessor functions for struct members, use the attribute `fieldgetset` in your `.capnp` file as follows:
+```sh
+capnp compile -o /path/to/capnpc-c:/output/dir myschema.capnp
+```
+
+If your schema imports `c.capnp`, pass the compiler's source directory as an include path:
+
+```sh
+capnp compile -o c -I /path/to/c-capnproto/compiler myschema.capnp
+```
+
+### Linking the runtime library
+
+Your project must compile and link these runtime source files:
+
+- `lib/capn.c`
+- `lib/capn-malloc.c`
+- `lib/capn-stream.c`
+
+And include `lib/capnp_c.h` (add `lib/` to your include path).
+
+### Using as a meson subproject
+
+Add a wrap file at `subprojects/c-capnproto.wrap`, then in your `meson.build`:
+
+```meson
+capnpc_proj = subproject('c-capnproto')
+libcapnp_dep = capnpc_proj.get_variable('libcapnp_dep')
+
+executable('myapp', 'main.c', 'myschema.capnp.c',
+    dependencies: [libcapnp_dep])
+```
+
+## Generated Code Layers
+
+The code generator produces two layers of functionality:
+
+### Layer 1: Wire-format struct functions (always generated)
+
+For each struct `Foo` in your schema, the generator produces:
+
+| Function | Purpose |
+|----------|---------|
+| `new_Foo(seg)` | Allocate a new Foo in a segment |
+| `new_Foo_list(seg, len)` | Allocate a list of Foo |
+| `read_Foo(s, ptr)` | Read fields from wire format into `struct Foo` |
+| `write_Foo(s, ptr)` | Write fields from `struct Foo` to wire format |
+| `get_Foo(s, list, i)` | Read the i-th element from a Foo list |
+| `set_Foo(s, list, i)` | Write the i-th element to a Foo list |
+
+The generated `struct Foo` uses capnp runtime types (`capn_text`, `capn_data`, `capn_ptr`, etc.) for pointer fields.
+
+### Layer 2: Codec functions (requires `$C.codecgen`)
+
+When you annotate your schema file with `$C.codecgen`, the generator additionally produces codec functions that convert between the wire-format struct and your own application-defined C struct:
+
+| Function | Purpose |
+|----------|---------|
+| `encode_Foo(cs, d, s)` | Copy from your struct `s` into wire struct `d` |
+| `decode_Foo(d, s)` | Copy from wire struct `s` into your struct `d` (allocates memory) |
+| `free_Foo(d)` | Free memory allocated by `decode_Foo` |
+| `encode_Foo_ptr(cs, p, s)` | Encode + write to a new capnp allocation |
+| `decode_Foo_ptr(d, p)` | Read + decode from a capnp pointer |
+| `free_Foo_ptr(d)` | Free decoded pointer |
+| `encode_Foo_list(cs, l, count, s)` | Encode an array of structs into a list |
+| `decode_Foo_list(pcount, d, list)` | Decode a list into an array of struct pointers |
+| `free_Foo_list(count, d)` | Free a decoded list |
+
+### Layer 3: Getter/setter functions (requires `$C.fieldgetset`)
+
+When you annotate with `$C.fieldgetset`, the generator produces per-field accessor functions:
+
+```c
+capn_text Foo_get_name(Foo_ptr p);
+void Foo_set_name(Foo_ptr p, capn_text name);
+uint32_t Foo_get_id(Foo_ptr p);
+void Foo_set_id(Foo_ptr p, uint32_t id);
+```
+
+These allow accessing individual fields without reading/writing the entire struct.
+
+## Annotations Reference
+
+All annotations are defined in `compiler/c.capnp`. Import them in your schema:
 
 ```capnp
-using C = import "${c-capnproto}/compiler/c.capnp";
+using C = import "/c.capnp";
+```
 
+### File-level annotations
+
+| Annotation | Type | Description |
+|------------|------|-------------|
+| `$C.fieldgetset` | Void | Generate per-field getter/setter functions |
+| `$C.codecgen` | Void | Generate encode/decode/free codec functions |
+| `$C.extraheader("...")` | Text | Add preprocessor directives to the generated header |
+| `$C.namespace("...")` | Text | Prefix all struct names with a namespace string |
+| `$C.nameinfix("...")` | Text | Insert text before `.c`/`.h` in output filenames |
+| `$C.extendedattribute("...")` | Text | Add an attribute (e.g. `__declspec(dllexport)`) to all generated functions |
+| `$C.donotinclude(id)` | UInt64 | Suppress `#include` for an imported file by its ID |
+
+### Type-level annotations
+
+| Annotation | Applies to | Description |
+|------------|-----------|-------------|
+| `$C.mapname("type_name")` | struct, enum, field, union | Map to a custom C type/field name in codec |
+| `$C.typedefto("type_name")` | struct, enum | Generate a typedef declaration |
+| `$C.mapuniontag("field_name")` | union, struct | Map the union discriminant to a custom field name |
+
+### Field-level annotations
+
+| Annotation | Applies to | Description |
+|------------|-----------|-------------|
+| `$C.mapname("field_name")` | field | Map to a custom field name in the user struct |
+| `$C.maplistcount("count_field")` | field | Specify the name of the count field for lists/Data |
+
+## Type Mapping
+
+### Scalar types
+
+| Cap'n Proto | Generated C type (wire struct) | User struct (codec) |
+|-------------|-------------------------------|---------------------|
+| Bool | `uint8_t` (bit) | `uint8_t` |
+| Int8/UInt8 | `int8_t`/`uint8_t` | same |
+| Int16/UInt16 | `int16_t`/`uint16_t` | same |
+| Int32/UInt32 | `int32_t`/`uint32_t` | same |
+| Int64/UInt64 | `int64_t`/`uint64_t` | same |
+| Float32 | `float` | `float` |
+| Float64 | `double` | `double` |
+| Enum | `enum FooEnum` | same |
+
+### Pointer types
+
+| Cap'n Proto | Generated C type (wire struct) | User struct (codec) |
+|-------------|-------------------------------|---------------------|
+| Text | `capn_text` | `char *` |
+| Data | `capn_data` | `uint8_t *` + length field |
+| struct Foo | `Foo_ptr` | `foo_t *` (pointer, heap-allocated) |
+| List(scalar) | `capn_listN` | `scalar_type *` + count field |
+| List(Text) | `capn_ptr` | `char **` + count field |
+| List(Data) | `capn_ptr` | `capnp_data_t *` + count field |
+| List(struct) | `Foo_list` | `foo_t **` + count field |
+
+### The `capnp_data_t` type
+
+For `Data` fields decoded via codec, the runtime provides:
+
+```c
+typedef struct {
+    uint8_t *data;
+    int len;
+} capnp_data_t;
+```
+
+This is used for individual elements when decoding `List(Data)`.
+
+## Complete Example: Codec with Data fields
+
+### Schema (`message.capnp`)
+
+```capnp
+@0xabcdef1234567890;
+
+using C = import "/c.capnp";
+$C.fieldgetset;
+$C.codecgen;
+$C.extraheader("#include \"message.h\"");
+
+struct Message $C.mapname("message_t") {
+  name     @0 :Text;
+  payload  @1 :Data    $C.mapname("payload") $C.maplistcount("payload_len");
+  chunks   @2 :List(Data) $C.mapname("chunks") $C.maplistcount("n_chunks");
+  tag      @3 :UInt32;
+}
+```
+
+### User struct header (`message.h`)
+
+```c
+#ifndef MESSAGE_H
+#define MESSAGE_H
+
+#include <stdint.h>
+#include "capnp_c.h"
+
+typedef struct {
+    char *name;              /* Text -> char* */
+    uint8_t *payload;        /* Data -> uint8_t* */
+    int payload_len;         /* Data length */
+    int n_chunks;            /* List(Data) count */
+    capnp_data_t *chunks;   /* List(Data) -> array of {data, len} */
+    uint32_t tag;            /* UInt32 -> uint32_t */
+} message_t;
+
+#endif
+```
+
+### Generating code
+
+```sh
+capnp compile -o capnpc-c -I /path/to/c-capnproto/compiler message.capnp
+```
+
+Produces `message.capnp.c` and `message.capnp.h`.
+
+### Encoding (serialize to bytes)
+
+```c
+#include "message.capnp.h"
+#include "message.h"
+
+void send_message(void) {
+    uint8_t payload[] = {0xDE, 0xAD, 0xBE, 0xEF};
+    capnp_data_t chunks[2] = {
+        {.data = (uint8_t*)"hello", .len = 5},
+        {.data = (uint8_t*)"world", .len = 5},
+    };
+
+    message_t msg = {
+        .name = "example",
+        .payload = payload,
+        .payload_len = sizeof(payload),
+        .n_chunks = 2,
+        .chunks = chunks,
+        .tag = 42,
+    };
+
+    struct capn c;
+    capn_init_malloc(&c);
+    struct capn_segment *cs = capn_root(&c).seg;
+
+    Message_ptr ptr;
+    encode_Message_ptr(cs, &ptr, &msg);
+    capn_setp(capn_root(&c), 0, ptr.p);
+
+    /* Write to file descriptor */
+    capn_write_fd(&c, write, fd, 0 /* not packed */);
+
+    capn_free(&c);
+}
+```
+
+### Decoding (deserialize from bytes)
+
+```c
+#include "message.capnp.h"
+#include "message.h"
+
+void receive_message(const uint8_t *buf, size_t len) {
+    struct capn c;
+    capn_init_mem(&c, buf, len, 0 /* not packed */);
+
+    Message_ptr ptr;
+    ptr.p = capn_getp(capn_root(&c), 0, 1);
+
+    message_t *msg = NULL;
+    decode_Message_ptr(&msg, ptr);
+
+    if (msg) {
+        printf("name: %s\n", msg->name);
+        printf("payload (%d bytes):", msg->payload_len);
+        for (int i = 0; i < msg->payload_len; i++)
+            printf(" %02x", msg->payload[i]);
+        printf("\n");
+
+        printf("chunks (%d):\n", msg->n_chunks);
+        for (int i = 0; i < msg->n_chunks; i++) {
+            printf("  [%d] %d bytes\n", i, msg->chunks[i].len);
+        }
+        printf("tag: %u\n", msg->tag);
+
+        free_Message_ptr(&msg);  /* frees all allocated memory */
+    }
+
+    capn_free(&c);
+}
+```
+
+## Complete Example: Low-level API (without codec)
+
+For simpler use cases without codec, you work directly with the wire-format structs:
+
+### Schema (`addressbook.capnp`)
+
+```capnp
+@0x9eb32e19f86ee174;
+
+using C = import "/c.capnp";
 $C.fieldgetset;
 
-struct MyStruct {}
+struct Person {
+  id    @0 :UInt32;
+  name  @1 :Text;
+  email @2 :Text;
+}
 ```
 
-#### extraheader
+### Encoding
 
-If you want to add `#include <...>` or any other preprocessor statements in your generated C file, use the attribute `extraheader` in your `.capnp` file as follows:
+```c
+#include "addressbook.capnp.h"
 
-```capnp
-using C = import "${c-capnproto}/compiler/c.capnp";
+void write_person(void) {
+    struct capn c;
+    capn_init_malloc(&c);
+    struct capn_segment *cs = capn_root(&c).seg;
 
-$C.extraheader("include <stdio.h>");
+    Person_ptr person = new_Person(cs);
+    struct Person p;
+    memset(&p, 0, sizeof(p));
+    p.id = 123;
+    p.name.str = "Alice";
+    p.name.len = strlen(p.name.str);
+    p.name.seg = NULL;
+    p.email.str = "alice@example.com";
+    p.email.len = strlen(p.email.str);
+    p.email.seg = NULL;
 
-struct MyStruct {}
+    write_Person(&p, person);
+    capn_setp(capn_root(&c), 0, person.p);
+
+    /* serialize... */
+    capn_write_fd(&c, write, 1, 0);
+    capn_free(&c);
+}
 ```
 
-#### extendedattribute
+### Decoding
 
-If you want to add an `__declspec(dllexport)` or some other extended attribute to your generated C functions and structs, use the attribute `extendedattribute` in your `.capnp` file as follows:
+```c
+#include "addressbook.capnp.h"
 
-```capnp
-using C = import "${c-capnproto}/compiler/c.capnp";
+void read_person(const uint8_t *buf, size_t len) {
+    struct capn c;
+    capn_init_mem(&c, buf, len, 0);
 
-$C.extendedattribute("__declspec(dllexport)");
+    Person_ptr person;
+    person.p = capn_getp(capn_root(&c), 0, 1);
 
-struct MyStruct {}
+    struct Person p;
+    read_Person(&p, person);
+
+    printf("id: %u, name: %s, email: %s\n", p.id, p.name.str, p.email.str);
+
+    capn_free(&c);
+}
 ```
 
-### Example C code
+## Runtime API Summary
 
-See the unit tests in [`tests/example-test.cpp`](tests/example-test.cpp).
-The example schema file is [`tests/addressbook.capnp`](tests/addressbook.capnp).
-The tests are written in C++, but only use C features.
+### Initialization
 
-You need to compile these runtime library files and link them into your own project's binaries:
+| Function | Description |
+|----------|-------------|
+| `capn_init_malloc(&c)` | Initialize for writing (allocates segments on heap) |
+| `capn_init_mem(&c, buf, sz, packed)` | Initialize by reading from memory buffer |
+| `capn_init_fp(&c, fp, packed)` | Initialize by reading from a FILE* |
+| `capn_free(&c)` | Free all segments |
 
-* [`lib/capn.c`](lib/capn.c)
-* [`lib/capn-malloc.c`](lib/capn-malloc.c)
-* [`lib/capn-stream.c`](lib/capn-stream.c)
+### Serialization
 
-Your include path must contain the runtime library directory
-[`lib`](lib). Header file [`lib/capnp_c.h`](lib/capnp_c.h) contains
-the public interfaces of the library.
+| Function | Description |
+|----------|-------------|
+| `capn_root(&c)` | Get the root pointer of a message |
+| `capn_setp(p, off, tgt)` | Set a pointer field |
+| `capn_getp(p, off, resolve)` | Get a pointer field |
+| `capn_size(&c)` | Calculate serialized size (unpacked) |
+| `capn_write_mem(&c, buf, sz, packed)` | Serialize to memory buffer |
+| `capn_write_fd(&c, write_fn, fd, packed)` | Serialize to file descriptor |
 
-Using make-based builds, make may try to compile `${x}.capnp` from
-`${x}.capnp.c` using its built-in rule for compiling `${y}` from
-`${y}.c`. You can either disable make's built-in compile rules or just
-this specific case with the no-op rule: `%.capnp: ;`.
+### Text and Data
 
-For further reference, please see the other unit tests in [`tests`](tests), and header file [`lib/capnp_c.h`](lib/capnp_c.h).
+| Function | Description |
+|----------|-------------|
+| `capn_get_text(p, off, def)` | Read a Text field |
+| `capn_set_text(p, off, text)` | Write a Text field |
+| `capn_get_data(p, off)` | Read a Data field |
+| `capn_new_list8(seg, sz)` | Create a byte list (for writing Data) |
+| `capn_setv8(list, off, data, sz)` | Write bytes into a list |
+| `capn_getv8(list, off, data, sz)` | Read bytes from a list |
 
-The project [`quagga-capnproto`](https://github.com/opensourcerouting/quagga-capnproto) uses `c-capnproto` and contains some good examples, as found with [this github repository search](https://github.com/opensourcerouting/quagga-capnproto/search?utf8=%E2%9C%93&q=capn&type=):
+Note: There is no `capn_set_data()`. To write Data, create a list8 and set `data.p = list.p`.
 
-* Serialization in function [`bgp_notify_send()`](https://github.com/opensourcerouting/quagga-capnproto/blob/27061648f3418fac0d217b16a46add534343e841/bgpd/bgp_zmq.c#L81-L96) in file `quagga-capnproto/bgpd/bgp_zmq.c`
-* Deserialization in function [`qzc_callback()`](https://github.com/opensourcerouting/quagga-capnproto/blob/27061648f3418fac0d217b16a46add534343e841/lib/qzc.c#L249-L257) in file `quagga-capnproto/lib/qzc.c`
+## Project Structure
 
-### Example CMake Usage
-
-The minimum CMake version is 3.22. *The true CMake minimum version could be lower; you are welcome to test and submit a PR to [CMakeLists.txt](./CMakeLists.txt).*
-
-```cmake
-FetchContent_Declare(c-capnproto
-        GIT_REPOSITORY https://gitlab.com/dkml/ext/c-capnproto.git
-        # For reproducibility use a commit id rather than a tag
-        GIT_TAG f07596dbb516329d27ea95060a758f5d48d26366)
-FetchContent_MakeAvailable(c-capnproto)
-
-# Creating an executable or library that uses c-capnproto?
-# --------------------------------------------------------
-
-# filename: yourcode.c
-#
-#   #include "capnp_c.h"
-#   ...
-
-add_executable(YourExecutable ... yourcode.c)
-target_link_libraries(YourExecutable PRIVATE CapnC::Runtime)
+```
+c-capnproto/
+├── lib/                    # Runtime library
+│   ├── capnp_c.h          # Public header
+│   ├── capn.c             # Core implementation
+│   ├── capn-malloc.c      # Malloc-based segment allocator
+│   └── capn-stream.c      # Serialization/deserialization
+├── compiler/               # Code generator plugin
+│   ├── capnpc-c.c         # Plugin entry point
+│   ├── codegen.c          # Wire struct code generation
+│   ├── codegen_codec.c    # Codec (encode/decode/free) code generation
+│   ├── c.capnp            # Annotation definitions
+│   └── schema.capnp       # Cap'n Proto schema meta-schema
+├── tests/                  # Test files
+├── examples/book/          # Full codec example
+├── meson.build             # Build system
+├── meson_options.txt       # Build options
+└── subprojects/gtest.wrap  # Google Test dependency
 ```
 
-## Status
+## License
 
-<https://github.com/opensourcerouting/c-capnproto> was a merge of 3 forks of [James McKaskill's great
-work](https://github.com/jmckaskill/c-capnproto), which had been untouched for
-a while:
-
-* [liamstask's fork](https://github.com/liamstask/c-capnproto)
-* [baruch's fork](https://github.com/baruch/c-capnproto)
-* [kylemanna's fork](https://github.com/kylemanna/c-capnproto)
+MIT License. See [COPYING](COPYING) for details.
