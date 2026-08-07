@@ -1,4 +1,0 @@
-{
-    "cmake.configureOnOpen": false,
-    "sonarlint.pathToCompileCommands": "${workspaceFolder}/build_dev/compile_commands.json"
-}
