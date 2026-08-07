@@ -33,6 +33,23 @@ static void mk_simple_list_encoder(struct str *func, const char *tab,
     str_addf(func, "\t\tcapn_set_text(d->%s, i_, text_);\n", dvar);
     str_add(func, tab, -1);
     str_addf(func, "\t}\n");
+  } else if (strcmp(list_type, "data") == 0) {
+    str_add(func, tab, -1);
+    str_addf(func, "\td->%s = capn_new_ptr_list(cs, s->%s);\n", dvar, cvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\tfor(i_ = 0; i_ < s->%s; i_ ++) {\n", cvar);
+    str_add(func, tab, -1);
+    str_addf(func,
+             "\t\tcapn_list8 item_ = capn_new_list8(cs, s->%s[i_].len);\n",
+             svar);
+    str_add(func, tab, -1);
+    str_addf(func,
+             "\t\tcapn_setv8(item_, 0, s->%s[i_].data, s->%s[i_].len);\n",
+             svar, svar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tcapn_setp(d->%s, i_, item_.p);\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t}\n");
   } else {
     str_add(func, tab, -1);
     str_addf(func, "\td->%s = capn_new_%s(cs, s->%s);\n", dvar, list_type,
@@ -79,6 +96,45 @@ static void mk_simple_list_decoder(struct str *func, const char *tab,
              svar);
     str_add(func, tab, -1);
     str_addf(func, "\t\t\td->%s[i_] = STRING_DUP(text_.str);\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t}\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t}\n");
+  } else if (strcmp(list_type, "data") == 0) {
+    str_add(func, tab, -1);
+    str_addf(func, "\tcapn_resolve(&(s->%s));\n", svar);
+    str_add(func, tab, -1);
+    str_addf(func, "\tnc_ = s->%s.len;\n", svar);
+    str_add(func, tab, -1);
+    str_addf(func, "\tif (nc_ == 0) {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\td->%s = NULL;\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t}\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\telse {\n");
+    str_add(func, tab, -1);
+    str_addf(func,
+             "\t\td->%s = (capnp_data_t *)calloc(nc_, sizeof(capnp_data_t));\n",
+             dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t\tcapn_ptr item_ = capn_getp(s->%s, i_, 1);\n", svar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t\td->%s[i_].len = item_.len;\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t\tif (item_.len > 0) {\n");
+    str_add(func, tab, -1);
+    str_addf(func,
+             "\t\t\t\td->%s[i_].data = (uint8_t *)malloc(item_.len);\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func,
+             "\t\t\t\tcapn_getv8((capn_list8){item_}, 0, d->%s[i_].data, "
+             "item_.len);\n",
+             dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t\t}\n");
     str_add(func, tab, -1);
     str_addf(func, "\t\t}\n");
     str_add(func, tab, -1);
@@ -134,6 +190,17 @@ static void mk_simple_list_free(struct str *func, const char *tab,
     str_addf(func, "\t\tfree(d->%s[i_]);\n", dvar);
     str_add(func, tab, -1);
     str_addf(func, "\t}\n");
+  } else if (strcmp(list_type, "data") == 0) {
+    str_add(func, tab, -1);
+    str_addf(func, "\tfor(i_ = 0; i_ < nc_; i_ ++) {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tif (d->%s[i_].data != NULL) {\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t\tfree(d->%s[i_].data);\n", dvar);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\t}\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t}\n");
   }
 
   str_add(func, tab, -1);
@@ -163,6 +230,7 @@ static const struct list_type_info list_types[] = {
     {Type_uint64, "uint64_t", "list64", "set64", "get64"},
     {Type_float64, "double", "list64", "set64", "get64"},
     {Type_text, "text", "text", NULL, NULL},
+    {Type_data, "data", "data", NULL, NULL},
 };
 
 static const struct list_type_info *find_list_type(int which) {
@@ -290,6 +358,28 @@ void encode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
     str_add(func, tab, -1);
     str_addf(func, "d->%s.seg = NULL;\n", var);
     break;
+  case Type_data: {
+    char *ncount = (char *)get_maplistcount(f->f.annotations);
+    struct str buf = STR_INIT;
+    if (ncount != NULL) {
+      strf(&buf, "%s", ncount);
+    } else {
+      strf(&buf, "n_%s", var2);
+    }
+    str_add(func, tab, -1);
+    str_addf(func, "if (s->%s != NULL && s->%s > 0) {\n", var2, buf.str);
+    str_add(func, tab, -1);
+    str_addf(func, "\tcapn_list8 list_ = capn_new_list8(cs, s->%s);\n",
+             buf.str);
+    str_add(func, tab, -1);
+    str_addf(func, "\tcapn_setv8(list_, 0, s->%s, s->%s);\n", var2, buf.str);
+    str_add(func, tab, -1);
+    str_addf(func, "\td->%s.p = list_.p;\n", var);
+    str_add(func, tab, -1);
+    str_addf(func, "}\n");
+    str_release(&buf);
+    break;
+  }
   case Type__struct:
     n = find_node(ctx, f->v.t._struct.typeId);
 
@@ -364,6 +454,42 @@ void decode_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
     str_add(func, tab, -1);
     str_addf(func, "d->%s = STRING_DUP(s->%s.str);\n", var2, var);
     break;
+  case Type_data: {
+    char *ncount = (char *)get_maplistcount(f->f.annotations);
+    struct str buf = STR_INIT;
+    if (ncount != NULL) {
+      strf(&buf, "%s", ncount);
+    } else {
+      strf(&buf, "n_%s", var2);
+    }
+    str_add(func, tab, -1);
+    str_addf(func, "if (1) {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\tint nc_;\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\tcapn_resolve(&(s->%s.p));\n", var);
+    str_add(func, tab, -1);
+    str_addf(func, "\tnc_ = s->%s.p.len;\n", var);
+    str_add(func, tab, -1);
+    str_addf(func, "\td->%s = nc_;\n", buf.str);
+    str_add(func, tab, -1);
+    str_addf(func, "\tif (nc_ > 0) {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\td->%s = (uint8_t *)malloc(nc_);\n", var2);
+    str_add(func, tab, -1);
+    str_addf(func, "\t\tcapn_getv8((capn_list8){s->%s.p}, 0, d->%s, nc_);\n",
+             var, var2);
+    str_add(func, tab, -1);
+    str_addf(func, "\t} else {\n");
+    str_add(func, tab, -1);
+    str_addf(func, "\t\td->%s = NULL;\n", var2);
+    str_add(func, tab, -1);
+    str_addf(func, "\t}\n");
+    str_add(func, tab, -1);
+    str_addf(func, "}\n");
+    str_release(&buf);
+    break;
+  }
   case Type__struct:
     n = find_node(ctx, f->v.t._struct.typeId);
     if (n != NULL) {
@@ -446,6 +572,14 @@ void free_member(capnp_ctx_t *ctx, struct str *func, struct field *f,
   case Type__enum:
     break;
   case Type_text:
+    str_add(func, tab, -1);
+    str_addf(func, "if (d->%s != NULL) {\n", var2);
+    str_add(func, tab, -1);
+    str_addf(func, "\tfree(d->%s);\n", var2);
+    str_add(func, tab, -1);
+    str_addf(func, "}\n");
+    break;
+  case Type_data:
     str_add(func, tab, -1);
     str_addf(func, "if (d->%s != NULL) {\n", var2);
     str_add(func, tab, -1);
