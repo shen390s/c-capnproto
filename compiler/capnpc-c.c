@@ -353,5 +353,7 @@ int main(int argc, char *argv[]) {
 
   ctx_gen(&ctx);
 
+  ctx_free(&ctx);
+
   return 0;
 }

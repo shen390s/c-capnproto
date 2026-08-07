@@ -218,3 +218,34 @@ int ctx_init(capnp_ctx_t *ctx, FILE *fp) {
   }
   return 0;
 }
+
+
+static void free_all_nodes(struct capn_tree *t) {
+  if (t == NULL)
+    return;
+  free_all_nodes(t->link[0]);
+  free_all_nodes(t->link[1]);
+  struct node *n = (struct node *)t;
+  str_release(&n->name);
+  free(n->fields);
+  free(n);
+}
+
+void ctx_free(capnp_ctx_t *ctx) {
+  int i;
+
+  /* Free node tree (nodes, their names, and field arrays) */
+  free_all_nodes(ctx->g_node_tree);
+
+  /* Free capnp session (segments allocated by capn_init_fp) */
+  capn_free(&ctx->capn);
+
+  /* Free value segment data */
+  free(ctx->g_valseg.data);
+
+  /* Free string buffers */
+  str_release(&ctx->HDR);
+  str_release(&ctx->SRC);
+  for (i = 0; i < 4; i++)
+    str_release(&ctx->scratch[i]);
+}

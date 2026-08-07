@@ -90,5 +90,6 @@ const char *get_maplistcount(Annotation_list l);
 const char *get_mapuniontag(Annotation_list l);
 void decode_field(capnp_ctx_t *ctx, struct field *fields, Field_list l, int i);
 int ctx_init(capnp_ctx_t *ctx, FILE *fp);
+void ctx_free(capnp_ctx_t *ctx);
 
 #endif /* CTX_H */
