@@ -33,9 +33,8 @@ c-capnproto.pc
 
 subprojects/googletest-*
 subprojects/packagecache
+subprojects/.wraplock
 
 /build/
 /build_dev/
 /.ci/
-
-/CMakeUserPresets.json
