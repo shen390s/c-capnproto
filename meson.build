@@ -78,4 +78,34 @@ if get_option('enable_tests') and not meson.is_subproject()
     )
   test('capn-test', exe)
 
+  # data-codec test: generate schema code and test Data/List(Data) codec
+  capnp = find_program('capnp', required: false)
+  if capnp.found()
+    data_codec_gen = custom_target('data-codec-capnp',
+      input: 'tests' / 'data-codec.capnp',
+      output: ['data-codec.capnp.c', 'data-codec.capnp.h'],
+      command: [capnp, 'compile',
+        '-o', capnpc_c.full_path() + ':' + '@OUTDIR@',
+        '-I', meson.current_source_dir() / 'compiler',
+        '--src-prefix', meson.current_source_dir() / 'tests',
+        '@INPUT@'],
+      depends: [capnpc_c],
+    )
+
+    gtest_main_dep = gtest_proj.get_variable('gtest_main_dep')
+    data_codec_test_deps = [libcapnp_dep, gtest_dep, gtest_main_dep, thread_dep]
+
+    data_codec_test_exe = executable('data-codec-test',
+        'tests' / 'data-codec-test.cpp',
+        data_codec_gen,
+        include_directories: include_directories(['lib', 'tests', 'compiler']),
+        dependencies: data_codec_test_deps,
+        c_args : common_c_args + ['-D_POSIX_C_SOURCE=200809L'],
+        cpp_args : common_cpp_args,
+        install: false,
+        implicit_include_directories: true
+    )
+    test('data-codec-test', data_codec_test_exe)
+  endif
+
 endif
